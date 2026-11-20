@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SkyLine session
+Comment=Applies the current sky and shows the welcome screen once
+Exec=/usr/bin/skyline-session
+Icon=skyline
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2

@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=SkyLine
+Description=SkyLine boot splash: the logo on a peach sky
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/skyline
+ScriptFile=/usr/share/plymouth/themes/skyline/skyline.script

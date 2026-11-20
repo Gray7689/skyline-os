@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# skyline-sky: SkyLine's wallpaper and colors follow the time of day.
+#
+#   skyline-sky                          show the current setting
+#   skyline-sky auto                     follow the clock (default)
+#   skyline-sky sunrise|day|dusk|night   keep one sky
+#   skyline-sky menu                     pick in a small window
+#   skyline-sky tick                     apply the right sky now (timer and login use this)
+set -euo pipefail
+
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/skyline"
+CONF="$CONF_DIR/sky.conf"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/skyline"
+STATE="$STATE_DIR/sky-applied"
+WALLPAPERS=/usr/share/wallpapers
+
+usage() {
+	sed -n '2,9s/^# \{0,1\}//p' "$0"
+}
+
+mode() {
+	local m=auto
+	if [[ -f $CONF ]]; then
+		m=$(sed -n 's/^mode=//p' "$CONF" | tail -n 1)
+	fi
+	case $m in
+		auto | sunrise | day | dusk | night) echo "$m" ;;
+		*) echo auto ;;
+	esac
+}
+
+set_mode() {
+	mkdir -p "$CONF_DIR"
+	printf '# auto = follow the time of day. Or pin one: sunrise, day, dusk, night\nmode=%s\n' "$1" >"$CONF"
+}
+
+sky_for_now() {
+	local h
+	h=$(date +%-H)
+	if ((h >= 6 && h < 10)); then
+		echo sunrise
+	elif ((h >= 10 && h < 17)); then
+		echo day
+	elif ((h >= 17 && h < 20)); then
+		echo dusk
+	else
+		echo night
+	fi
+}
+
+current_sky() {
+	local m
+	m=$(mode)
+	if [[ $m == auto ]]; then sky_for_now; else echo "$m"; fi
+}
+
+# sky name -> "ColorScheme WallpaperPackage"
+look_for() {
+	case $1 in
+		sunrise) echo "SkyLinePeach SkyLine-Peach" ;;
+		day) echo "SkyLineSky SkyLine-Sky" ;;
+		dusk) echo "SkyLineDusk SkyLine-Dusk" ;;
+		night) echo "SkyLineNight SkyLine-Night" ;;
+	esac
+}
+
+apply() {
+	local sky=$1 force=${2:-}
+	if [[ -z $force && -f $STATE && $(cat "$STATE") == "$sky" ]]; then
+		return 0
+	fi
+	# Only change things inside a running Plasma desktop.
+	if ! pgrep -u "$(id -u)" -x plasmashell >/dev/null; then
+		return 0
+	fi
+	local scheme wallpaper
+	read -r scheme wallpaper <<<"$(look_for "$sky")"
+	plasma-apply-colorscheme "$scheme" >/dev/null 2>&1 || true
+	plasma-apply-wallpaperimage "$WALLPAPERS/$wallpaper/contents/images/3840x2160.png" >/dev/null 2>&1 || true
+	mkdir -p "$STATE_DIR"
+	echo "$sky" >"$STATE"
+}
+
+menu() {
+	local m choice
+	m=$(mode)
+	state() { [[ $m == "$1" ]] && echo on || echo off; }
+	choice=$(kdialog --title "SkyLine Sky" --icon skyline --radiolist "How should your sky look?" \
+		auto "Follow the time of day" "$(state auto)" \
+		sunrise "Sunrise (peach)" "$(state sunrise)" \
+		day "Day (blue sky)" "$(state day)" \
+		dusk "Dusk (lavender)" "$(state dusk)" \
+		night "Night (dark)" "$(state night)") || exit 0
+	[[ -n $choice ]] && "$0" "$choice"
+}
+
+case "${1:-status}" in
+	tick) apply "$(current_sky)" ;;
+	auto)
+		set_mode auto
+		apply "$(sky_for_now)" force
+		;;
+	sunrise | day | dusk | night)
+		set_mode "$1"
+		apply "$1" force
+		;;
+	menu) menu ;;
+	status)
+		echo "mode: $(mode)"
+		echo "sky now: $(current_sky)"
+		;;
+	-h | --help) usage ;;
+	*)
+		usage >&2
+		exit 2
+		;;
+esac

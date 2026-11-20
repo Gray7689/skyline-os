@@ -1,0 +1,7 @@
+[Unit]
+Description=SkyLine dynamic sky (wallpaper and colors follow the time of day)
+
+[Service]
+Type=oneshot
+Environment=QT_QPA_PLATFORM=offscreen
+ExecStart=/usr/bin/skyline-sky tick

@@ -1,0 +1,4 @@
+# Keep Linux line endings even when edited on Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

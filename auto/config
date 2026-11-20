@@ -1,0 +1,23 @@
+#!/bin/sh
+# SkyLine live-build configuration. Called by "lb config"; don't run it directly.
+set -e
+
+lb config noauto \
+	--distribution trixie \
+	--architectures amd64 \
+	--archive-areas "main contrib non-free non-free-firmware" \
+	--security true \
+	--updates true \
+	--apt-recommends true \
+	--debian-installer none \
+	--bootloaders "syslinux,grub-efi" \
+	--uefi-secure-boot enable \
+	--firmware-chroot true \
+	--firmware-binary false \
+	--memtest none \
+	--bootappend-live "boot=live components quiet splash username=skyline hostname=skyline user-fullname=SkyLine" \
+	--iso-application "SkyLine" \
+	--iso-publisher "SkyLine OS" \
+	--iso-volume "SkyLine 1.0" \
+	--image-name "skyline-1.0" \
+	"${@}"

@@ -1,0 +1,21 @@
+# live-build output
+/.build/
+/cache/
+/chroot/
+/binary/
+/local/
+/config/binary
+/config/bootstrap
+/config/chroot
+/config/common
+/config/source
+/config/bootloaders/
+/config/hooks/normal/0520-skyline-claude.hook.chroot
+*.iso
+*.iso.sha256
+*.contents
+*.files
+*.packages
+build.log
+chroot.*
+binary.*

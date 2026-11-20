@@ -1,0 +1,5 @@
+#!/bin/sh
+# Called by "lb build". Keeps a full log next to the ISO.
+set -e
+
+lb build noauto "${@}" 2>&1 | tee build.log

@@ -1,0 +1,22 @@
+#!/bin/sh
+# SkyLine desktop setup: tools, timers, icon cache, Flathub.
+set -e
+echo "SkyLine: setting up the desktop"
+
+# Files copied from a Windows PC can lose their "executable" flag.
+chmod 0755 /usr/bin/skyline-* /usr/lib/skyline/install-apps /usr/lib/skyline/install-claude
+
+# Dynamic sky: check the time every few minutes for every user.
+mkdir -p /etc/systemd/user/timers.target.wants
+ln -sf /usr/lib/systemd/user/skyline-sky.timer /etc/systemd/user/timers.target.wants/skyline-sky.timer
+
+# Make the SkyLine icon show up everywhere.
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+	gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
+fi
+
+# App store: add Flathub so Discover and "SkyLine Apps" can install Discord, Steam, Roblox...
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+	|| echo "SkyLine: could not add Flathub now; SkyLine Apps will add it on first use"
+
+echo "SkyLine: desktop done"

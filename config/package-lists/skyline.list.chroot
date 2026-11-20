@@ -1,0 +1,39 @@
+# SkyLine: everything installed into the system image.
+# One package per line. Lines starting with # are ignored.
+
+# --- KDE Plasma 6 desktop (Debian's full KDE task: Plasma, Dolphin, Konsole, Kate, Spectacle...)
+task-kde-desktop
+sddm-theme-breeze
+plasma-discover-backend-flatpak
+flatpak
+kdialog
+partitionmanager
+
+# --- Installer shown in the live session
+calamares
+calamares-settings-debian
+
+# --- Boot: Secure Boot signed chain (shim + signed GRUB), boot splash
+shim-signed
+grub-efi-amd64
+grub-efi-amd64-signed
+grub-pc-bin
+efibootmgr
+# the installer's bootloader step expects these already present, so offline installs work
+cryptsetup
+cryptsetup-initramfs
+keyutils
+plymouth
+plymouth-themes
+
+# --- Hardware support (Wi-Fi, graphics, CPU fixes)
+firmware-linux
+amd64-microcode
+intel-microcode
+
+# --- Everyday basics
+curl
+gnupg
+ca-certificates
+fonts-noto-color-emoji
+dbus-bin

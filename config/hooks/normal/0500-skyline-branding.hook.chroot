@@ -1,0 +1,54 @@
+#!/bin/sh
+# SkyLine identity: OS name, boot menu safety, installer branding, boot splash.
+# Runs inside the new system while the ISO is being built.
+set -e
+echo "SkyLine: applying branding"
+
+# --- OS name -------------------------------------------------------------
+# Divert Debian's file so system updates never put "Debian" back.
+if [ ! -e /usr/lib/os-release.debian ]; then
+	dpkg-divert --quiet --local --rename --divert /usr/lib/os-release.debian --add /usr/lib/os-release
+fi
+cat > /usr/lib/os-release <<'EOF'
+PRETTY_NAME="SkyLine 1.0"
+NAME="SkyLine"
+VERSION_ID="1.0"
+VERSION="1.0 (Debian 13 base)"
+VERSION_CODENAME=trixie
+ID=skyline
+ID_LIKE=debian
+LOGO=skyline
+EOF
+ln -sf ../usr/lib/os-release /etc/os-release
+printf 'SkyLine 1.0 \\n \\l\n\n' > /etc/issue
+printf 'SkyLine 1.0\n' > /etc/issue.net
+
+# --- Boot menu: keep GRUB's EFI folder named "debian" -----------------------
+# Debian's Microsoft-signed GRUB expects /EFI/debian. GRUB derives that folder
+# from GRUB_DISTRIBUTOR, which Debian reads from os-release (now "SkyLine").
+# Pinning it keeps Secure Boot working after every GRUB update.
+if [ -f /etc/default/grub ]; then
+	sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR=Debian/' /etc/default/grub
+fi
+
+# --- Installer (Calamares) -------------------------------------------------
+for f in /etc/calamares/settings.conf /usr/share/calamares/settings.conf; do
+	if [ -f "$f" ]; then
+		sed -i 's/^branding:.*/branding: skyline/' "$f"
+	fi
+done
+for f in /usr/share/applications/*.desktop; do
+	if grep -qE '^Exec=.*(calamares|install-debian)' "$f"; then
+		sed -i -e 's/^Name=.*/Name=Install SkyLine/' -e '/^Name\[/d' -e 's/^Icon=.*/Icon=skyline/' "$f"
+	fi
+done
+
+# --- Boot splash -----------------------------------------------------------
+# /etc/plymouth/plymouthd.conf already selects it; this also refreshes the boot image.
+# Neither step is fatal: live-build rebuilds the boot image again at the end.
+if [ -d /usr/share/plymouth/themes/skyline ]; then
+	plymouth-set-default-theme skyline || echo "SkyLine: plymouth-set-default-theme failed (plymouthd.conf still selects SkyLine)"
+fi
+update-initramfs -u -k all || echo "SkyLine: update-initramfs failed here; live-build will run it again"
+
+echo "SkyLine: branding done"

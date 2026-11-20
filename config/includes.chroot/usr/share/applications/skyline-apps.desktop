@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=SkyLine Apps
+GenericName=App installer
+Comment=Install Claude, Discord, Steam, Roblox, Minecraft and more
+Icon=skyline
+Exec=skyline-apps
+Terminal=false
+Categories=System;PackageManager;
+Keywords=install;apps;claude;discord;steam;roblox;minecraft;spotify;

@@ -1,0 +1,35 @@
+#!/bin/sh
+# Adds Anthropic's apt repository and installs the Claude desktop app (Linux beta).
+# Run as root (SkyLine Apps starts it with pkexec). Steps follow code.claude.com/docs/en/desktop-linux
+set -eu
+
+KEY=/usr/share/keyrings/claude-desktop-archive-keyring.asc
+FPR=31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE
+
+if dpkg -s claude-desktop >/dev/null 2>&1; then
+	echo "Claude is already installed."
+	exit 0
+fi
+
+curl -fsSLo "$KEY.tmp" https://downloads.claude.ai/claude-desktop/key.asc
+GNUPGHOME="$(mktemp -d)"
+export GNUPGHOME
+got=$(gpg --show-keys --with-colons "$KEY.tmp" | awk -F: '/^fpr:/ {print $10; exit}')
+rm -rf "$GNUPGHOME"
+if [ "$got" != "$FPR" ]; then
+	echo "The downloaded key is not Anthropic's ($got). Stopping." >&2
+	rm -f "$KEY.tmp"
+	exit 1
+fi
+mv "$KEY.tmp" "$KEY"
+echo "deb [arch=amd64,arm64 signed-by=$KEY] https://downloads.claude.ai/claude-desktop/apt/stable stable main" \
+	>/etc/apt/sources.list.d/claude-desktop.list
+
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y claude-desktop
+
+# Cowork runs tasks in a small virtual machine and needs the kvm group.
+if [ -n "${PKEXEC_UID:-}" ]; then
+	user=$(id -nu "$PKEXEC_UID")
+	usermod -aG kvm "$user" && echo "Added $user to the kvm group (log out and back in for Cowork)."
+fi

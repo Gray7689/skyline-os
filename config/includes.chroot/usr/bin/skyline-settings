@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# skyline-settings: one place for SkyLine's own options. Everything else lives in KDE System Settings.
+set -euo pipefail
+
+choice=$(kdialog --title "SkyLine Settings" --icon skyline --geometry 440x320 --menu \
+	"What do you want to change?" \
+	sky "Sky and colors" \
+	layout "Desktop layout" \
+	apps "Get apps" \
+	everything "Everything else (KDE System Settings)") || exit 0
+
+case $choice in
+	sky) exec skyline-sky menu ;;
+	layout) exec skyline-layout menu ;;
+	apps) exec skyline-apps ;;
+	everything) exec systemsettings ;;
+esac

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Runs at every login: put the right sky up, then show the welcome window (only the first time).
+/usr/bin/skyline-sky tick || true
+sleep 3
+exec /usr/bin/skyline-welcome

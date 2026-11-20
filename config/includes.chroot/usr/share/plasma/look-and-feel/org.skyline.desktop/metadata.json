@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "SkyLine"
+            }
+        ],
+        "Category": "",
+        "Description": "SkyLine: a cute pastel sky that follows your day",
+        "Id": "org.skyline.desktop",
+        "License": "GPL-2.0-or-later",
+        "Name": "SkyLine",
+        "Version": "1.0"
+    },
+    "Keywords": "Desktop;Workspace;Appearance;Look and Feel;Splash;SkyLine",
+    "X-Plasma-APIVersion": "2"
+}

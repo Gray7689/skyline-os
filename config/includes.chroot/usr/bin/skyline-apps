@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# skyline-apps: pick your everyday apps and install them in one go.
+set -euo pipefail
+
+choices=$(kdialog --title "SkyLine Apps" --icon skyline --geometry 480x440 --separate-output --checklist \
+	"Pick the apps you want. SkyLine installs them for you." \
+	claude "Claude (AI assistant)" on \
+	discord "Discord" on \
+	steam "Steam (games)" on \
+	sober "Roblox player (Sober, unofficial)" off \
+	vinegar "Roblox Studio (Vinegar, unofficial)" off \
+	prism "Minecraft (Prism Launcher)" off \
+	spotify "Spotify" off \
+	vscode "Visual Studio Code" off \
+	obs "OBS Studio (record and stream)" off) || exit 0
+
+[[ -n $choices ]] || exit 0
+mapfile -t picked <<<"$choices"
+
+# Show progress in a terminal window so nothing happens silently.
+exec konsole --hold -e /usr/lib/skyline/install-apps "${picked[@]}"

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# skyline-layout: switch the whole desktop layout in one click.
+#
+#   skyline-layout classic   one bar at the bottom (like Windows)
+#   skyline-layout dock      top bar + app dock at the bottom (like a Mac)
+#   skyline-layout minimal   one small floating bar
+#   skyline-layout menu      pick in a small window
+#
+# After switching you can still drag, resize and edit every panel: right-click it > "Show Panel Configuration".
+set -euo pipefail
+
+DIR=/usr/lib/skyline/layouts
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/skyline"
+
+usage() {
+	sed -n '2,10s/^# \{0,1\}//p' "$0"
+}
+
+apply() {
+	local file="$DIR/$1.js"
+	if [[ ! -f $file ]]; then
+		echo "Unknown layout: $1" >&2
+		exit 2
+	fi
+	dbus-send --session --print-reply --dest=org.kde.plasmashell /PlasmaShell \
+		org.kde.PlasmaShell.evaluateScript "string:$(cat "$file")" >/dev/null
+	mkdir -p "$CONF_DIR"
+	echo "layout=$1" >"$CONF_DIR/layout.conf"
+}
+
+menu() {
+	local choice
+	choice=$(kdialog --title "SkyLine Layout" --icon skyline --radiolist \
+		"Pick a desktop layout. Your current panels will be replaced." \
+		classic "Classic: one bar at the bottom" on \
+		dock "Dock: top bar and an app dock" off \
+		minimal "Minimal: one small floating bar" off) || exit 0
+	[[ -n $choice ]] && apply "$choice"
+}
+
+case "${1:-menu}" in
+	classic | dock | minimal) apply "$1" ;;
+	menu) menu ;;
+	-h | --help) usage ;;
+	*)
+		usage >&2
+		exit 2
+		;;
+esac
