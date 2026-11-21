@@ -28,7 +28,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD":/w -w /w debian:trixie bash -euxc '
             apt-get update -qq
-            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ./dist/skyline-desktop_*_all.deb >/dev/null
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/skyline-desktop_*_all.deb || { tail -n 40 /var/log/dpkg.log; exit 1; }
             for t in skyline-sky skyline-layout skyline-taskbar skyline-gamemode skyline-play skyline-update; do $t --help >/dev/null; done
             skyline-settings --help >/dev/null
             skyline-assistant --ask "make it night" | grep -qi night
