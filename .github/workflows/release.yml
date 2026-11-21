@@ -1,11 +1,15 @@
-# Publishes the SkyLine package when you push a version tag (for example v1.1.0).
-# Before publishing, it installs the package on a clean Debian 13 and opens the apps there.
+# Publishes the SkyLine package when its version changes.
+# Bump "Version:" in package/debian/control, push to main, and this workflow:
+#   1. builds skyline-desktop_<version>_all.deb
+#   2. installs it on a clean Debian 13 and opens the apps there
+#   3. publishes GitHub release v<version> (skipped if that release already exists)
 # Installed SkyLine PCs then find the update with "skyline-update" and get a notification.
 name: Release SkyLine package
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: ["package/**", "tools/build-deb.sh", ".github/workflows/release.yml"]
   workflow_dispatch:
 
 permissions:
@@ -44,9 +48,13 @@ jobs:
           '
 
       - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/*.deb dist/*.sha256 \
-            --title "SkyLine ${GITHUB_REF_NAME#v}" --notes-file package/RELEASE_NOTES.md
+          version=$(sed -n 's/^Version: //p' package/debian/control)
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "Release v$version already exists. Bump Version: in package/debian/control to publish a new one."
+            exit 0
+          fi
+          gh release create "v$version" dist/*.deb dist/*.sha256 --target "$GITHUB_SHA" \
+            --title "SkyLine $version" --notes-file package/RELEASE_NOTES.md

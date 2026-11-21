@@ -40,9 +40,9 @@ Log out and back in. From now on SkyLine tells you when a new version is out.
 | `package/debian/` | Package details (version, dependencies) and its install script. Bump `Version:` for a new release. |
 | `config/`, `auto/` | The live-build recipe for the ISO. The ISO installs the skyline-desktop package. |
 | `tools/` | `make-assets.py` (all artwork), `make-colors.py` (color schemes), `build-deb.sh` (the package). |
-| `.github/workflows/` | `build-iso.yml` builds the ISO on demand; `release.yml` tests and publishes the package when you push a tag like `v1.2.0`. |
+| `.github/workflows/` | `build-iso.yml` builds the ISO on demand; `release.yml` tests and publishes the package whenever its version changes. |
 
-**To release a new version:** change `Version:` in `package/debian/control` and the notes in `package/RELEASE_NOTES.md`, commit, then `git tag v1.2.0 && git push --tags`.
+**To release a new version:** change `Version:` in `package/debian/control` and the notes in `package/RELEASE_NOTES.md`, then commit and push to `main`. GitHub tests it on Debian 13 and publishes the release.
 
 ## Build it
 
