@@ -1,0 +1,39 @@
+---
+# SkyLine installer branding (Calamares)
+componentName: skyline
+
+welcomeStyleCalamares: false
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 900px,580px
+windowPlacement: center
+sidebar: widget
+navigation: widget
+
+strings:
+    productName:         SkyLine
+    shortProductName:    SkyLine
+    version:             1.1
+    shortVersion:        1.1
+    versionedName:       SkyLine 1.1
+    shortVersionedName:  SkyLine 1.1
+    bootloaderEntryName: SkyLine
+    productUrl:          ""
+    supportUrl:          ""
+    knownIssuesUrl:      ""
+    releaseNotesUrl:     ""
+    donateUrl:           ""
+
+images:
+    productLogo:         "logo.png"
+    productIcon:         "logo.png"
+    productWelcome:      "welcome.png"
+
+slideshow:               "show.qml"
+slideshowAPI: 2
+
+style:
+    SidebarBackground:        "#23264A"
+    SidebarText:              "#FFFFFF"
+    SidebarTextCurrent:       "#23264A"
+    SidebarBackgroundCurrent: "#FFD8CC"

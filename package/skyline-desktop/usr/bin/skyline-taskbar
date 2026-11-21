@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# skyline-taskbar: change how the taskbar (Plasma panels) looks.
+#
+#   skyline-taskbar auto     follows the sky colors (default)
+#   skyline-taskbar black    solid black taskbar
+#   skyline-taskbar white    solid white taskbar
+#   skyline-taskbar glass    see-through with blur
+#   skyline-taskbar clear    fully transparent
+#   skyline-taskbar status   show the current style
+#   skyline-taskbar reapply  re-apply the saved style (after a layout change)
+#
+# The style is also the "Plasma Style" in KDE System Settings, so popups match the taskbar.
+set -euo pipefail
+
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/skyline"
+CONF="$CONF_DIR/taskbar.conf"
+APPLETS="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-org.kde.plasma.desktop-appletsrc"
+
+usage() {
+	sed -n '2,12s/^# \{0,1\}//p' "$0"
+}
+
+saved() {
+	if [[ -f $CONF ]]; then sed -n 's/^style=//p' "$CONF" | tail -n 1; fi
+}
+
+# Plasma panel opacity: 0 = adaptive, 1 = opaque, 2 = translucent
+style_settings() {
+	case $1 in
+		auto) echo "default 0" ;;
+		black) echo "breeze-dark 1" ;;
+		white) echo "breeze-light 1" ;;
+		glass) echo "default 2" ;;
+		clear) echo "skyline-clear 2" ;;
+	esac
+}
+
+panel_ids() {
+	[[ -f $APPLETS ]] || return 0
+	python3 - "$APPLETS" <<'EOF'
+import re, sys
+current = None
+for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
+    line = line.strip()
+    m = re.fullmatch(r"\[Containments\]\[(\d+)\]", line)
+    if m:
+        current = m.group(1)
+        continue
+    if line.startswith("["):
+        current = None
+        continue
+    if current and line == "plugin=org.kde.panel":
+        print(current)
+EOF
+}
+
+restart_shell() { # restart_shell COMMAND... : stop Plasma's shell, run the command, start it again
+	if systemctl --user is-active --quiet plasma-plasmashell.service 2>/dev/null; then
+		systemctl --user stop plasma-plasmashell.service
+		"$@"
+		systemctl --user start plasma-plasmashell.service
+	else
+		kquitapp6 plasmashell >/dev/null 2>&1 || true
+		sleep 1
+		"$@"
+		setsid -f plasmashell >/dev/null 2>&1
+	fi
+}
+
+write_opacity() {
+	local opacity=$1 id
+	for id in $(panel_ids); do
+		kwriteconfig6 --file plasmashellrc --group PlasmaViews --group "Panel $id" --key panelOpacity "$opacity"
+	done
+}
+
+apply() {
+	local style=$1 theme opacity
+	read -r theme opacity <<<"$(style_settings "$style")"
+	plasma-apply-desktoptheme "$theme" >/dev/null 2>&1 || true
+	restart_shell write_opacity "$opacity"
+	mkdir -p "$CONF_DIR"
+	echo "style=$style" >"$CONF"
+}
+
+case "${1:-status}" in
+	auto | black | white | glass | clear) apply "$1" ;;
+	reapply)
+		s=$(saved)
+		if [[ -n $s && $s != auto ]]; then apply "$s"; fi
+		;;
+	status) echo "taskbar: $(saved || true)" ;;
+	-h | --help) usage ;;
+	*)
+		usage >&2
+		exit 2
+		;;
+esac

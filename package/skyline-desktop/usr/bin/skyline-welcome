@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# skyline-welcome: a friendly window on first login (and an install hint on the live USB).
+set -euo pipefail
+
+if grep -qw 'boot=live' /proc/cmdline; then
+	flag="${XDG_RUNTIME_DIR:-/tmp}/skyline-welcome-shown"
+	[[ -e $flag ]] && exit 0
+	touch "$flag"
+	kdialog --title "Welcome to SkyLine" --icon skyline --msgbox \
+		$'You\'re trying SkyLine from the USB stick. Nothing on your PC has changed.\n\nWhen you\'re ready, open "Install SkyLine" on the desktop or in the launcher.'
+	exit 0
+fi
+
+done_flag="${XDG_CONFIG_HOME:-$HOME/.config}/skyline/welcome-done"
+[[ -e $done_flag ]] && exit 0
+mkdir -p "$(dirname "$done_flag")"
+touch "$done_flag"
+
+if kdialog --title "Welcome to SkyLine" --icon skyline --yes-label "Pick my apps" --no-label "Later" --yesno \
+	$'Welcome to SkyLine!\n\nYour sky follows the time of day. Change it, your taskbar, layout and more in SkyLine Settings, or just ask Puff, your SkyLine Assistant.\n\nWant to install your everyday apps now? (Claude, Discord, Steam, Roblox...)'; then
+	exec skyline-apps
+fi

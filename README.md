@@ -6,19 +6,43 @@ peach at sunrise, blue at noon, lavender at dusk, starry at night.
 
 This folder is the whole recipe. One command turns it into an ISO you can put on a USB stick.
 
-## What's in SkyLine 1.0
+## What's in SkyLine 1.1
 
 | | |
 |---|---|
 | **Desktop** | KDE Plasma 6. Drag, resize and restyle anything: panels, widgets, window buttons, icons, fonts, animations. |
-| **Dynamic sky** | Wallpaper and colors switch with the time of day. Pin one sky any time (`skyline-sky night`). |
-| **Layouts** | One-click desktop layouts: **Classic** (bar at the bottom), **Dock** (top bar + app dock), **Minimal** (small floating bar). |
-| **SkyLine Settings** | One window for sky, layout and apps. Everything else is in KDE System Settings. |
-| **SkyLine Apps** | Tick boxes to install Claude, Discord, Steam, Roblox (Sober), Roblox Studio (Vinegar), Minecraft (Prism), Spotify, VS Code, OBS. |
+| **Dynamic sky** | Wallpaper, colors and lock screen follow the time of day, and the **real weather** (rain, snow, clouds) if you set your city. |
+| **Taskbar styles** | Follows the sky, **black**, **white**, **glass** (see-through) or **clear** (invisible). |
+| **Layouts** | One click: **Classic** (bar at the bottom), **Dock** (top bar + app dock), **Minimal** (small floating bar). |
+| **Puff, the Assistant** | A pixel cloud you chat with. Changes your sky, layout, taskbar, Game Mode and apps. Works offline for simple requests (English and Italian); connect **Claude, OpenAI, NVIDIA, Groq, Gemini, OpenRouter, Ollama** or any OpenAI-compatible server to talk about anything. |
+| **SkyLine Settings** | One app for sky, weather, layout, taskbar, accent color, icons, sounds, apps, gaming, Puff and updates. |
+| **Game Mode** | Maximum performance and muted notifications. `skyline-play` runs games on the NVIDIA card. |
+| **SkyLine Apps** | Tick boxes to install Claude, Discord, Steam, Roblox (Sober), Roblox Studio (Vinegar), Minecraft (Prism), Spotify, VS Code, OBS and the NVIDIA driver. |
+| **NVIDIA** | One-click driver: turns on non-free sources, registers the Secure Boot key and enables external monitors. |
+| **Updates** | SkyLine checks GitHub once a day and offers "Update now". Discover updates Debian and your apps. |
+| **Look** | 16 wallpapers (4 times of day x clear, cloudy, rain, snow), pastel folder icons, soft sounds, boot splash, login and installer. |
 | **Claude** | The official Claude desktop app (Linux beta) comes pre-installed. |
-| **Look** | SkyLine boot splash, login screen, loading screen, installer, icon and 4 wallpapers. |
-| **Installer** | Calamares, branded SkyLine. Can install next to Windows. |
 | **Secure Boot** | Uses Debian's Microsoft-signed boot chain (shim + GRUB). No need to turn Secure Boot off. |
+
+## Already on SkyLine 1.0? Update in two commands
+
+```
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.1.0/skyline-desktop_1.1.0_all.deb
+sudo apt install ./skyline-desktop_1.1.0_all.deb
+```
+Log out and back in. From now on SkyLine tells you when a new version is out.
+
+## How the repository is organized
+
+| Folder | What it is |
+|---|---|
+| `package/skyline-desktop/` | Every SkyLine file, laid out as it lands on the system (`usr/bin/skyline-sky` becomes `/usr/bin/skyline-sky`). Built into the **skyline-desktop** package. |
+| `package/debian/` | Package details (version, dependencies) and its install script. Bump `Version:` for a new release. |
+| `config/`, `auto/` | The live-build recipe for the ISO. The ISO installs the skyline-desktop package. |
+| `tools/` | `make-assets.py` (all artwork), `make-colors.py` (color schemes), `build-deb.sh` (the package). |
+| `.github/workflows/` | `build-iso.yml` builds the ISO on demand; `release.yml` tests and publishes the package when you push a tag like `v1.2.0`. |
+
+**To release a new version:** change `Version:` in `package/debian/control` and the notes in `package/RELEASE_NOTES.md`, commit, then `git tag v1.2.0 && git push --tags`.
 
 ## Build it
 
@@ -44,7 +68,7 @@ The build has to run on **Debian 12 or 13**. Pick one way:
    It takes 30–90 minutes, downloads about 3 GB and needs about 20 GB free.
 4. Copy the ISO to Windows:
    ```
-   cp skyline-1.0-amd64.hybrid.iso /mnt/c/Users/YOU/Downloads/
+   cp skyline-1.1-amd64.hybrid.iso /mnt/c/Users/YOU/Downloads/
    ```
 
 ### B. In a Debian virtual machine
@@ -76,16 +100,14 @@ After that, a menu at start-up lets you pick SkyLine or Windows.
 | Change | Where |
 |---|---|
 | Colors of every app and window | `tools/make-colors.py`, then run it |
-| Wallpapers, icon, boot and installer art | `tools/make-assets.py`, then run it |
+| Wallpapers, weather skies, icons, sounds, boot and installer art | `tools/make-assets.py`, then run it |
 | Pre-installed programs | `config/package-lists/skyline.list.chroot` |
-| Desktop layouts | `config/includes.chroot/usr/lib/skyline/layouts/*.js` |
-| Apps offered in SkyLine Apps | `usr/bin/skyline-apps` and `usr/lib/skyline/install-apps` |
-| Name and version | `config/hooks/normal/0500-skyline-branding.hook.chroot`, `auto/config`, installer `branding.desc` |
-| When each sky starts | `sky_for_now` in `usr/bin/skyline-sky` |
+| Desktop layouts | `package/skyline-desktop/usr/lib/skyline/layouts/*.js` |
+| Puff's offline commands | `local_brain` in `package/skyline-desktop/usr/bin/skyline-assistant` |
+| AI services Puff can use | `PROVIDERS` in `package/skyline-desktop/usr/lib/skyline/skyline_ai.py` |
+| When each sky starts | `sky_for_now` in `package/skyline-desktop/usr/bin/skyline-sky` |
 
-Everything in `config/includes.chroot/` is copied into the system as-is, so `config/includes.chroot/usr/bin/x` becomes `/usr/bin/x`.
-
-## Known limits in 1.0
+## Known limits
 
 - The start-up menu entry says **"Debian GNU/Linux"** on purpose. Debian's signed GRUB expects that name, and renaming it can break Secure Boot after an update. Fixing this safely is on the roadmap.
 - The Claude app for Linux is a beta: no Computer Use and no voice dictation yet.
@@ -94,6 +116,5 @@ Everything in `config/includes.chroot/` is copied into the system as-is, so `con
 
 ## Roadmap
 
-- 1.1: SkyLine Settings as a real app (live previews instead of dialogs), accent color picker, more layouts.
-- 1.2: SkyLine icon set and cursor, custom login screen, "SkyLine" in the start-up menu (tested with Secure Boot).
-- Later: SkyLine app store page, automatic updates notifier, a mascot.
+- 1.2: "SkyLine" in the start-up menu (tested with Secure Boot), custom cursors, more layouts.
+- Later: Puff on the lock screen, a SkyLine app store page, more weather (fog, storms).

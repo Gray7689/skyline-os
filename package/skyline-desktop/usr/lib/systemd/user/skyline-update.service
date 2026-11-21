@@ -1,0 +1,7 @@
+[Unit]
+Description=Check for a new SkyLine version
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/skyline-update notify
+TimeoutStartSec=15min

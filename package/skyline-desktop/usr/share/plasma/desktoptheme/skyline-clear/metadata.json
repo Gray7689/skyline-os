@@ -1,0 +1,15 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "SkyLine"
+            }
+        ],
+        "Description": "Breeze with a fully transparent taskbar",
+        "Id": "skyline-clear",
+        "License": "GPL-2.0-or-later",
+        "Name": "SkyLine Clear",
+        "Version": "1.1"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

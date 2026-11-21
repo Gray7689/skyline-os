@@ -7,7 +7,7 @@ Edit the palettes below to retheme every app, window and panel at once.
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-INC = ROOT / "config" / "includes.chroot"
+INC = ROOT / "package" / "skyline-desktop"
 
 COMMON_FG = dict(negative="#D2384B", neutral="#B86E0A", positive="#2E8B57")
 
@@ -113,7 +113,7 @@ def main():
     skel.write_text(
         "[KDE]\nLookAndFeelPackage=org.skyline.desktop\nwidgetStyle=Breeze\n\n"
         "[General]\nColorScheme=SkyLinePeach\n\n"
-        "[Icons]\nTheme=breeze\n\n" + color_groups(p) + "\n" + wm(p))
+        "[Icons]\nTheme=SkyLine\n\n[Sounds]\nTheme=skyline\n\n" + color_groups(p) + "\n" + wm(p))
     print("SkyLine color schemes written.")
 
 

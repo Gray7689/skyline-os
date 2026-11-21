@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# skyline-gamemode: one switch for gaming.
+#
+#   skyline-gamemode on       maximum performance, notifications muted
+#   skyline-gamemode off      back to normal
+#   skyline-gamemode toggle   switch on or off
+#   skyline-gamemode status   show whether it's on
+#
+# Games run on the NVIDIA card when started with "skyline-play GAME"
+# (SkyLine Settings > Gaming shows the Steam launch option to copy).
+set -euo pipefail
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/skyline"
+FLAG="$STATE_DIR/gamemode-on"
+PREV="$STATE_DIR/gamemode-previous-profile"
+PIDFILE="$STATE_DIR/gamemode-dnd.pid"
+
+usage() {
+	sed -n '2,10s/^# \{0,1\}//p' "$0"
+}
+
+say() {
+	notify-send -a SkyLine -i skyline "$1" "$2" >/dev/null 2>&1 || true
+}
+
+turn_on() {
+	mkdir -p "$STATE_DIR"
+	if command -v powerprofilesctl >/dev/null 2>&1; then
+		powerprofilesctl get >"$PREV" 2>/dev/null || true
+		powerprofilesctl set performance >/dev/null 2>&1 || true
+	fi
+	# Say it before muting notifications.
+	say "Game Mode on" "Maximum performance. Notifications are muted until you turn it off."
+	if [[ ! -f $PIDFILE ]] || ! kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+		setsid -f python3 /usr/lib/skyline/dnd-hold "$PIDFILE" >/dev/null 2>&1 || true
+	fi
+	touch "$FLAG"
+}
+
+turn_off() {
+	if [[ -f $PIDFILE ]]; then
+		kill "$(cat "$PIDFILE")" 2>/dev/null || true
+		rm -f "$PIDFILE"
+	fi
+	if command -v powerprofilesctl >/dev/null 2>&1; then
+		local profile=balanced
+		[[ -s $PREV ]] && profile=$(cat "$PREV")
+		[[ $profile == performance ]] && profile=balanced
+		powerprofilesctl set "$profile" >/dev/null 2>&1 || true
+	fi
+	rm -f "$FLAG" "$PREV"
+	say "Game Mode off" "Back to normal."
+}
+
+case "${1:-status}" in
+	on) turn_on ;;
+	off) turn_off ;;
+	toggle) if [[ -f $FLAG ]]; then turn_off; else turn_on; fi ;;
+	status) if [[ -f $FLAG ]]; then echo on; else echo off; fi ;;
+	-h | --help) usage ;;
+	*)
+		usage >&2
+		exit 2
+		;;
+esac

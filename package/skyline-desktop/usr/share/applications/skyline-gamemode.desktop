@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Name=Game Mode
+GenericName=SkyLine Game Mode
+Comment=Maximum performance and no notifications while you play
+Icon=input-gaming
+Exec=skyline-gamemode toggle
+Terminal=false
+Categories=Game;Settings;
+Keywords=game;gaming;performance;nvidia;
+Actions=On;Off;
+
+[Desktop Action On]
+Name=Turn Game Mode on
+Exec=skyline-gamemode on
+
+[Desktop Action Off]
+Name=Turn Game Mode off
+Exec=skyline-gamemode off

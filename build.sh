@@ -51,17 +51,20 @@ free_gb=$(df -Pk . | awk 'NR==2 {print int($4/1024/1024)}')
 say "installing the build tools"
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-	live-build debootstrap squashfs-tools xorriso mtools dosfstools curl ca-certificates >/dev/null
+	live-build debootstrap squashfs-tools xorriso mtools dosfstools curl ca-certificates dpkg-dev >/dev/null
 
 say "checking files"
 # Windows can strip the "executable" flag and add CRLF line endings. Fix both.
-if grep -rlI $'\r' auto config hooks-optional >/dev/null 2>&1; then
-	grep -rlI $'\r' auto config hooks-optional | xargs sed -i 's/\r$//'
+if grep -rlI $'\r' auto config hooks-optional package tools >/dev/null 2>&1; then
+	grep -rlI $'\r' auto config hooks-optional package tools | xargs sed -i 's/\r$//'
 	say "converted Windows line endings"
 fi
-chmod 0755 auto/* config/hooks/normal/*.hook.chroot hooks-optional/*.hook.chroot \
-	config/includes.chroot/usr/bin/skyline-* \
-	config/includes.chroot/usr/lib/skyline/install-apps config/includes.chroot/usr/lib/skyline/install-claude
+chmod 0755 auto/* config/hooks/normal/*.hook.chroot hooks-optional/*.hook.chroot tools/*.sh
+
+say "packaging SkyLine (skyline-desktop)"
+rm -rf config/packages.chroot
+mkdir -p config/packages.chroot
+cp "$(bash tools/build-deb.sh)" config/packages.chroot/
 
 rm -f config/hooks/normal/0520-skyline-claude.hook.chroot
 if ((WITH_CLAUDE)); then

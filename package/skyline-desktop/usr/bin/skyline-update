@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# skyline-update: keep SkyLine itself up to date. (Discover updates Debian and your Flatpak apps.)
+#
+#   skyline-update check     is a newer SkyLine out?  (exit 0 = up to date, 10 = update available)
+#   skyline-update install   download it, check it, install it
+#   skyline-update notify    check, and show a notification with an "Update now" button
+#   skyline-update system    open Discover's updates page (Debian packages and apps)
+#
+# New versions come from the SkyLine GitHub releases (see /usr/share/skyline/update.conf).
+set -euo pipefail
+
+# shellcheck disable=SC1091
+. /usr/share/skyline/update.conf
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/skyline"
+
+usage() {
+	sed -n '2,9s/^# \{0,1\}//p' "$0"
+}
+
+installed_version() {
+	dpkg-query -W -f='${Version}' skyline-desktop 2>/dev/null || echo 0
+}
+
+# Prints: VERSION DEB_URL SHA256_URL
+latest_release() {
+	curl -fsS --max-time 20 -H "Accept: application/vnd.github+json" \
+		"https://api.github.com/repos/$REPO/releases/latest" | python3 -c '
+import json, sys
+r = json.load(sys.stdin)
+version = r["tag_name"].lstrip("v")
+deb = sha = ""
+for a in r.get("assets", []):
+    if a["name"].endswith("_all.deb"):
+        deb = a["browser_download_url"]
+    elif a["name"].endswith("_all.deb.sha256"):
+        sha = a["browser_download_url"]
+print(version, deb, sha)
+'
+}
+
+check() {
+	local info version deb
+	if ! info=$(latest_release 2>/dev/null); then
+		echo "Couldn't reach GitHub. Check your internet connection."
+		return 1
+	fi
+	read -r version deb _ <<<"$info"
+	if [[ -n $deb ]] && dpkg --compare-versions "$version" gt "$(installed_version)"; then
+		echo "SkyLine $version is available (you have $(installed_version))."
+		return 10
+	fi
+	echo "SkyLine is up to date ($(installed_version))."
+	return 0
+}
+
+install_update() {
+	local info version deb sha tmp
+	info=$(latest_release) || {
+		echo "Couldn't reach GitHub. Check your internet connection."
+		exit 1
+	}
+	read -r version deb sha <<<"$info"
+	if [[ -z $deb ]]; then
+		echo "The latest release has no SkyLine package yet. Try again later."
+		exit 1
+	fi
+	if ! dpkg --compare-versions "$version" gt "$(installed_version)"; then
+		echo "SkyLine is already up to date ($(installed_version))."
+		exit 0
+	fi
+	tmp=$(mktemp -d)
+	trap 'rm -rf "$tmp"' EXIT
+	echo "Downloading SkyLine $version ..."
+	curl -fL --progress-bar -o "$tmp/skyline-desktop_${version}_all.deb" "$deb"
+	if [[ -n $sha ]]; then
+		curl -fsSL -o "$tmp/expected.sha256" "$sha"
+		local want got
+		want=$(cut -d' ' -f1 "$tmp/expected.sha256")
+		got=$(sha256sum "$tmp/skyline-desktop_${version}_all.deb" | cut -d' ' -f1)
+		if [[ $want != "$got" ]]; then
+			echo "The download is damaged (checksum doesn't match). Nothing was installed."
+			exit 1
+		fi
+		echo "Download checked."
+	fi
+	echo "Installing (SkyLine will ask for your password) ..."
+	pkexec apt-get install -y -o Dpkg::Options::=--force-confnew "$tmp/skyline-desktop_${version}_all.deb"
+	echo
+	echo "SkyLine $version installed. Log out and back in to see everything new."
+}
+
+notify() {
+	local msg rc=0 version
+	msg=$(check) || rc=$?
+	[[ $rc -eq 10 ]] || return 0
+	version=$(awk '{print $2}' <<<"$msg")
+	mkdir -p "$STATE_DIR"
+	# Ask only once per version.
+	if [[ -f $STATE_DIR/update-notified && $(cat "$STATE_DIR/update-notified") == "$version" ]]; then
+		return 0
+	fi
+	echo "$version" >"$STATE_DIR/update-notified"
+	local action
+	action=$(notify-send -a SkyLine -i skyline -A update="Update now" -A later="Later" \
+		"SkyLine $version is ready" "New features and fixes for your desktop." 2>/dev/null || true)
+	if [[ $action == update ]]; then
+		setsid -f konsole --hold -e skyline-update install >/dev/null 2>&1
+	fi
+}
+
+case "${1:-check}" in
+	check) check ;;
+	install) install_update ;;
+	notify) notify ;;
+	system) exec plasma-discover --mode update ;;
+	-h | --help) usage ;;
+	*)
+		usage >&2
+		exit 2
+		;;
+esac

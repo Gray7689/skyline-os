@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=SkyLine Assistant
+GenericName=Puff
+Comment=Ask Puff to change your sky, layout, taskbar and apps
+Icon=skyline
+Exec=skyline-assistant
+Terminal=false
+Categories=Utility;Qt;KDE;
+Keywords=assistant;ai;puff;help;chat;claude;

@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+# skyline-sky: SkyLine's wallpaper, colors and lock screen follow the time of day (and the weather).
+#
+#   skyline-sky                          show the current setting
+#   skyline-sky auto                     follow the clock (default)
+#   skyline-sky sunrise|day|dusk|night   keep one sky
+#   skyline-sky weather on|off           show real rain, snow and clouds
+#   skyline-sky place LAT LON NAME       where to check the weather
+#   skyline-sky accent '#RRGGBB'|none    accent color on top of the sky colors
+#   skyline-sky menu                     pick in a small window
+#   skyline-sky tick                     apply the right sky now (timer and login use this)
+set -euo pipefail
+
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/skyline"
+CONF="$CONF_DIR/sky.conf"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/skyline"
+STATE="$STATE_DIR/sky-applied"
+WEATHER_CACHE="$STATE_DIR/weather"
+WALLPAPERS=/usr/share/wallpapers
+
+usage() {
+	sed -n '2,13s/^# \{0,1\}//p' "$0"
+}
+
+get() { # get KEY DEFAULT
+	local v=""
+	if [[ -f $CONF ]]; then
+		v=$(sed -n "s/^$1=//p" "$CONF" | tail -n 1)
+	fi
+	echo "${v:-$2}"
+}
+
+set_key() { # set_key KEY VALUE
+	mkdir -p "$CONF_DIR"
+	[[ -f $CONF ]] || printf '# SkyLine sky settings (SkyLine Settings writes this file)\n' >"$CONF"
+	local tmp
+	tmp=$(mktemp)
+	grep -v "^$1=" "$CONF" >"$tmp" || true
+	printf '%s=%s\n' "$1" "$2" >>"$tmp"
+	mv "$tmp" "$CONF"
+}
+
+mode() {
+	local m
+	m=$(get mode auto)
+	case $m in
+		auto | sunrise | day | dusk | night) echo "$m" ;;
+		*) echo auto ;;
+	esac
+}
+
+sky_for_now() {
+	local h
+	h=$(date +%-H)
+	if ((h >= 6 && h < 10)); then
+		echo sunrise
+	elif ((h >= 10 && h < 17)); then
+		echo day
+	elif ((h >= 17 && h < 20)); then
+		echo dusk
+	else
+		echo night
+	fi
+}
+
+current_sky() {
+	local m
+	m=$(mode)
+	if [[ $m == auto ]]; then sky_for_now; else echo "$m"; fi
+}
+
+# Weather from Open-Meteo (free, no account). Cached for 30 minutes. Prints clear|cloudy|rain|snow.
+current_weather() {
+	if [[ $(get weather off) != on ]]; then
+		echo clear
+		return
+	fi
+	local lat lon now
+	lat=$(get lat "")
+	lon=$(get lon "")
+	if [[ -z $lat || -z $lon ]]; then
+		echo clear
+		return
+	fi
+	now=$(date +%s)
+	if [[ -f $WEATHER_CACHE ]]; then
+		local kind stamp
+		read -r kind stamp <"$WEATHER_CACHE" || true
+		if [[ -n ${stamp:-} ]] && ((now - stamp < 1800)); then
+			echo "$kind"
+			return
+		fi
+	fi
+	local json code kind
+	if json=$(curl -fsS --max-time 10 "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=weather_code" 2>/dev/null); then
+		code=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["current"]["weather_code"])' <<<"$json" 2>/dev/null || echo 0)
+		# WMO weather codes
+		if ((code == 0 || code == 1)); then
+			kind=clear
+		elif ((code >= 71 && code <= 77)) || ((code == 85 || code == 86)); then
+			kind=snow
+		elif ((code >= 51 && code <= 67)) || ((code >= 80 && code <= 82)) || ((code >= 95)); then
+			kind=rain
+		else
+			kind=cloudy
+		fi
+		mkdir -p "$STATE_DIR"
+		echo "$kind $now" >"$WEATHER_CACHE"
+		echo "$kind"
+	elif [[ -f $WEATHER_CACHE ]]; then
+		cut -d' ' -f1 "$WEATHER_CACHE"
+	else
+		echo clear
+	fi
+}
+
+# sky name -> "ColorScheme WallpaperPackage"
+look_for() {
+	case $1 in
+		sunrise) echo "SkyLinePeach SkyLine-Peach" ;;
+		day) echo "SkyLineSky SkyLine-Sky" ;;
+		dusk) echo "SkyLineDusk SkyLine-Dusk" ;;
+		night) echo "SkyLineNight SkyLine-Night" ;;
+	esac
+}
+
+apply() {
+	local sky=$1 force=${2:-}
+	local weather accent key
+	weather=$(current_weather)
+	accent=$(get accent none)
+	key="$sky $weather $accent"
+	if [[ -z $force && -f $STATE && $(cat "$STATE") == "$key" ]]; then
+		return 0
+	fi
+	# Only change things inside a running Plasma desktop.
+	if ! pgrep -u "$(id -u)" -x plasmashell >/dev/null; then
+		return 0
+	fi
+	local scheme wallpaper image
+	read -r scheme wallpaper <<<"$(look_for "$sky")"
+	if [[ $weather != clear ]]; then
+		wallpaper="$wallpaper-${weather^}"
+	fi
+	image="$WALLPAPERS/$wallpaper/contents/images/3840x2160.png"
+
+	if [[ $accent =~ ^#[0-9A-Fa-f]{6}$ ]]; then
+		plasma-apply-colorscheme --accent-color "$accent" "$scheme" >/dev/null 2>&1 || true
+	else
+		kwriteconfig6 --file kdeglobals --group General --key AccentColor --delete >/dev/null 2>&1 || true
+		plasma-apply-colorscheme "$scheme" >/dev/null 2>&1 || true
+	fi
+	plasma-apply-wallpaperimage "$image" >/dev/null 2>&1 || true
+	# The lock screen shows the same sky.
+	kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General \
+		--key Image "file://$image" >/dev/null 2>&1 || true
+
+	mkdir -p "$STATE_DIR"
+	echo "$key" >"$STATE"
+}
+
+menu() {
+	local m choice
+	m=$(mode)
+	state() { [[ $m == "$1" ]] && echo on || echo off; }
+	choice=$(kdialog --title "SkyLine Sky" --icon skyline --radiolist "How should your sky look?" \
+		auto "Follow the time of day" "$(state auto)" \
+		sunrise "Sunrise (peach)" "$(state sunrise)" \
+		day "Day (blue sky)" "$(state day)" \
+		dusk "Dusk (lavender)" "$(state dusk)" \
+		night "Night (dark)" "$(state night)") || exit 0
+	[[ -n $choice ]] && "$0" "$choice"
+}
+
+case "${1:-status}" in
+	tick) apply "$(current_sky)" ;;
+	auto)
+		set_key mode auto
+		apply "$(sky_for_now)" force
+		;;
+	sunrise | day | dusk | night)
+		set_key mode "$1"
+		apply "$1" force
+		;;
+	weather)
+		case "${2:-}" in
+			on | off)
+				set_key weather "$2"
+				rm -f "$WEATHER_CACHE"
+				apply "$(current_sky)" force
+				;;
+			*)
+				echo "Use: skyline-sky weather on|off" >&2
+				exit 2
+				;;
+		esac
+		;;
+	place)
+		[[ $# -ge 4 ]] || {
+			echo "Use: skyline-sky place LAT LON NAME" >&2
+			exit 2
+		}
+		set_key lat "$2"
+		set_key lon "$3"
+		set_key place "${*:4}"
+		rm -f "$WEATHER_CACHE"
+		apply "$(current_sky)" force
+		;;
+	accent)
+		case "${2:-}" in
+			none | "") set_key accent none ;;
+			\#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]) set_key accent "$2" ;;
+			*)
+				echo "Use: skyline-sky accent '#RRGGBB' or none" >&2
+				exit 2
+				;;
+		esac
+		apply "$(current_sky)" force
+		;;
+	menu) menu ;;
+	status)
+		echo "mode: $(mode)"
+		echo "sky now: $(current_sky)"
+		echo "weather: $(get weather off) ($(get place 'no place set'))"
+		echo "accent: $(get accent none)"
+		;;
+	-h | --help) usage ;;
+	*)
+		usage >&2
+		exit 2
+		;;
+esac

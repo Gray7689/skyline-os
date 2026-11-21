@@ -1,0 +1,13 @@
+Package: skyline-desktop
+Version: 1.1.0
+Section: x11
+Priority: optional
+Architecture: all
+Maintainer: ezey <Gray7689@users.noreply.github.com>
+Depends: python3, python3-pyqt6, python3-dbus, kdialog, konsole, kde-cli-tools, curl, gnupg, flatpak, libnotify-bin, pciutils, gamemode, dbus-bin
+Recommends: power-profiles-daemon, plymouth, plasma-discover
+Homepage: https://github.com/Gray7689/skyline-os
+Description: SkyLine desktop: dynamic sky, themes, SkyLine Settings and Puff
+ SkyLine's look and tools for KDE Plasma 6: wallpapers that follow the time
+ of day and the weather, color schemes, taskbar styles, desktop layouts,
+ Game Mode, an app installer, an updater and Puff, the SkyLine Assistant.

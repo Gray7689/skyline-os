@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# skyline-play: start a game on the NVIDIA graphics card, with Feral GameMode when available.
+#
+#   skyline-play COMMAND [ARGS...]
+#   Steam (native) launch option:   skyline-play %command%
+#
+# On laptops with two graphics chips the desktop runs on the power-saving one;
+# this sends the game to the fast NVIDIA card instead.
+set -euo pipefail
+
+if [[ $# -eq 0 || $1 == -h || $1 == --help ]]; then
+	sed -n '2,8s/^# \{0,1\}//p' "$0"
+	exit 0
+fi
+
+if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+	export __NV_PRIME_RENDER_OFFLOAD=1
+	export __VK_LAYER_NV_optimus=NVIDIA_only
+	export __GLX_VENDOR_LIBRARY_NAME=nvidia
+fi
+
+if command -v gamemoderun >/dev/null 2>&1; then
+	exec gamemoderun "$@"
+fi
+exec "$@"

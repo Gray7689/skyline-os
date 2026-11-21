@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Installs the apps picked in SkyLine Apps. Runs in a Konsole window so you can watch it.
+set -uo pipefail
+
+declare -A FLATPAK=(
+	[discord]=com.discordapp.Discord
+	[steam]=com.valvesoftware.Steam
+	[sober]=org.vinegarhq.Sober
+	[vinegar]=org.vinegarhq.Vinegar
+	[prism]=org.prismlauncher.PrismLauncher
+	[spotify]=com.spotify.Client
+	[vscode]=com.visualstudio.code
+	[obs]=com.obsproject.Studio
+)
+
+ids=()
+want_claude=0
+want_nvidia=0
+for app in "$@"; do
+	if [[ $app == claude ]]; then
+		want_claude=1
+	elif [[ $app == nvidia ]]; then
+		want_nvidia=1
+	elif [[ -n ${FLATPAK[$app]:-} ]]; then
+		ids+=("${FLATPAK[$app]}")
+	fi
+done
+
+failed=0
+echo "SkyLine Apps"
+echo "------------"
+
+if ((want_claude)); then
+	if dpkg -s claude-desktop >/dev/null 2>&1; then
+		echo "Claude is already installed."
+	else
+		echo "Claude: SkyLine will ask for your password to add Anthropic's app repository."
+		if pkexec /usr/lib/skyline/install-claude; then
+			echo "Claude installed."
+		else
+			echo "Claude could not be installed."
+			failed=1
+		fi
+	fi
+fi
+
+if ((want_nvidia)); then
+	echo "NVIDIA driver: SkyLine will ask for your password."
+	if pkexec /usr/lib/skyline/install-nvidia; then
+		echo "NVIDIA driver installed. Restart when the apps below are done."
+	else
+		echo "The NVIDIA driver could not be installed."
+		failed=1
+	fi
+fi
+
+if ((${#ids[@]})); then
+	if ! flatpak remotes --columns=name | grep -qx flathub; then
+		echo "Adding Flathub (the app store) ..."
+		pkexec /usr/bin/flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || failed=1
+	fi
+	echo "Installing from Flathub: ${ids[*]}"
+	echo "SkyLine may ask for your password once."
+	flatpak install --system -y --noninteractive flathub "${ids[@]}" || failed=1
+fi
+
+echo
+if ((failed)); then
+	echo "Some apps didn't install. Check your internet connection and run SkyLine Apps again."
+	exit 1
+fi
+echo "All set! Your apps are in the launcher. You can close this window."

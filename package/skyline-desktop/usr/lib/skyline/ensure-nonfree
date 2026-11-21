@@ -1,0 +1,19 @@
+#!/bin/sh
+# Make sure Debian's contrib and non-free sections are on (NVIDIA driver, Steam fonts, etc.). Run as root.
+set -eu
+
+LIST=/etc/apt/sources.list.d/skyline-nonfree.list
+
+apt-get update -qq || true
+if apt-cache policy nvidia-driver 2>/dev/null | grep -q 'Candidate: [0-9]'; then
+	exit 0
+fi
+
+echo "Turning on Debian's contrib and non-free software sections ..."
+cat >"$LIST" <<'EOF'
+# Added by SkyLine: drivers and software that aren't 100% open source (for example NVIDIA's driver).
+deb http://deb.debian.org/debian trixie contrib non-free
+deb http://deb.debian.org/debian trixie-updates contrib non-free
+deb http://security.debian.org/debian-security trixie-security contrib non-free
+EOF
+apt-get update -qq

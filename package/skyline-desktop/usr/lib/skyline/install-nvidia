@@ -1,0 +1,47 @@
+#!/bin/sh
+# Installs NVIDIA's own graphics driver, Secure Boot friendly. Run as root (SkyLine starts it with pkexec).
+# Steps: non-free sources, kernel headers + DKMS, Secure Boot signing key, driver, display support.
+set -eu
+
+MOK_PASSWORD=skyline1
+
+if ! lspci | grep -qi nvidia; then
+	echo "No NVIDIA graphics card found on this computer. Nothing to do."
+	exit 0
+fi
+
+/usr/lib/skyline/ensure-nonfree
+
+echo
+echo "Installing kernel headers and DKMS ..."
+DEBIAN_FRONTEND=noninteractive apt-get install -y linux-headers-amd64 dkms mokutil
+
+need_enroll=0
+if mokutil --sb-state 2>/dev/null | grep -q "SecureBoot enabled"; then
+	[ -f /var/lib/dkms/mok.pub ] || dkms generate_mok
+	if mokutil --test-key /var/lib/dkms/mok.pub 2>/dev/null | grep -q "already enrolled"; then
+		echo "Secure Boot key already registered."
+	else
+		printf '%s\n%s\n' "$MOK_PASSWORD" "$MOK_PASSWORD" | mokutil --import /var/lib/dkms/mok.pub
+		need_enroll=1
+	fi
+fi
+
+echo
+echo "Installing the NVIDIA driver (a few minutes) ..."
+DEBIAN_FRONTEND=noninteractive apt-get install -y nvidia-driver firmware-misc-nonfree nvidia-smi
+
+# Let the driver run screens too (needed for monitors plugged into the NVIDIA card).
+echo "options nvidia-drm modeset=1 fbdev=1" >/etc/modprobe.d/nvidia-drm.conf
+update-initramfs -u
+
+echo
+echo "================================================================"
+echo " NVIDIA driver installed. Restart your computer to use it."
+if [ "$need_enroll" = 1 ]; then
+	echo
+	echo " After the restart a BLUE screen appears (MOK Manager). Quickly press a key, then:"
+	echo "   Enroll MOK  ->  Continue  ->  Yes  ->  type the password:  $MOK_PASSWORD  ->  Reboot"
+	echo " This happens only once. It lets Secure Boot trust the driver."
+fi
+echo "================================================================"

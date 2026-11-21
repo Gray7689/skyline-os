@@ -1,0 +1,52 @@
+# Publishes the SkyLine package when you push a version tag (for example v1.1.0).
+# Before publishing, it installs the package on a clean Debian 13 and opens the apps there.
+# Installed SkyLine PCs then find the update with "skyline-update" and get a notification.
+name: Release SkyLine package
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build skyline-desktop.deb
+        run: bash tools/build-deb.sh
+
+      - name: Install and try it on Debian 13
+        run: |
+          docker run --rm -v "$PWD":/w -w /w debian:trixie bash -euxc '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ./dist/skyline-desktop_*_all.deb >/dev/null
+            for t in skyline-sky skyline-layout skyline-taskbar skyline-gamemode skyline-play skyline-update; do $t --help >/dev/null; done
+            skyline-settings --help >/dev/null
+            skyline-assistant --ask "make it night" | grep -qi night
+            export QT_QPA_PLATFORM=offscreen
+            python3 - <<EOF
+          import importlib.machinery, sys
+          from PyQt6.QtWidgets import QApplication
+          app = QApplication(sys.argv)
+          S = importlib.machinery.SourceFileLoader("s", "/usr/bin/skyline-settings").load_module()
+          A = importlib.machinery.SourceFileLoader("a", "/usr/bin/skyline-assistant").load_module()
+          s = S.SettingsWindow("sky"); a = A.AssistantWindow()
+          for i in range(len(S.PAGES)):
+              s.nav.setCurrentRow(i); app.processEvents()
+          a.close(); s.close()
+          print("SkyLine apps open fine on Debian 13")
+          EOF
+          '
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.deb dist/*.sha256 \
+            --title "SkyLine ${GITHUB_REF_NAME#v}" --notes-file package/RELEASE_NOTES.md

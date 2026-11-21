@@ -1,22 +1,20 @@
 #!/bin/sh
-# SkyLine desktop setup: tools, timers, icon cache, Flathub.
+# SkyLine desktop setup at ISO build time. (The skyline-desktop package's own setup
+# script already turned on the timers, icons and boot splash.)
 set -e
 echo "SkyLine: setting up the desktop"
-
-# Files copied from a Windows PC can lose their "executable" flag.
-chmod 0755 /usr/bin/skyline-* /usr/lib/skyline/install-apps /usr/lib/skyline/install-claude
-
-# Dynamic sky: check the time every few minutes for every user.
-mkdir -p /etc/systemd/user/timers.target.wants
-ln -sf /usr/lib/systemd/user/skyline-sky.timer /etc/systemd/user/timers.target.wants/skyline-sky.timer
-
-# Make the SkyLine icon show up everywhere.
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-	gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
-fi
 
 # App store: add Flathub so Discover and "SkyLine Apps" can install Discord, Steam, Roblox...
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
 	|| echo "SkyLine: could not add Flathub now; SkyLine Apps will add it on first use"
+
+# NVIDIA's driver and some game helpers live in Debian's contrib/non-free sections.
+# The installer writes fresh sources for the new system, so keep these switched on there too.
+cat >/etc/apt/sources.list.d/skyline-nonfree.list <<'LIST'
+# Added by SkyLine: drivers and software that aren't 100% open source (for example NVIDIA's driver).
+deb http://deb.debian.org/debian trixie contrib non-free
+deb http://deb.debian.org/debian trixie-updates contrib non-free
+deb http://security.debian.org/debian-security trixie-security contrib non-free
+LIST
 
 echo "SkyLine: desktop done"

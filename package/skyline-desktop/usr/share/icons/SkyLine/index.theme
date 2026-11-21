@@ -1,0 +1,19 @@
+[Icon Theme]
+Name=SkyLine
+Comment=SkyLine folders and logo, everything else from Breeze
+Inherits=breeze,hicolor
+Directories=places/scalable,apps/scalable
+
+[places/scalable]
+Size=64
+MinSize=8
+MaxSize=512
+Type=Scalable
+Context=Places
+
+[apps/scalable]
+Size=64
+MinSize=8
+MaxSize=512
+Type=Scalable
+Context=Applications

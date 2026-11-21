@@ -1,0 +1,39 @@
+[Desktop Entry]
+Type=Application
+Name=SkyLine Settings
+GenericName=Customize SkyLine
+Comment=Sky, weather, taskbar, layout, apps and gaming
+Icon=skyline
+Exec=skyline-settings
+Terminal=false
+Categories=Settings;DesktopSettings;Qt;KDE;
+Keywords=theme;wallpaper;sky;night;dark;layout;panel;dock;customize;
+Actions=SkyAuto;SkyNight;TaskbarClear;TaskbarBlack;LayoutClassic;LayoutDock;LayoutMinimal;
+
+[Desktop Action SkyAuto]
+Name=Sky: follow the time of day
+Exec=skyline-sky auto
+
+[Desktop Action SkyNight]
+Name=Sky: night (dark)
+Exec=skyline-sky night
+
+[Desktop Action TaskbarClear]
+Name=Taskbar: clear
+Exec=skyline-taskbar clear
+
+[Desktop Action TaskbarBlack]
+Name=Taskbar: black
+Exec=skyline-taskbar black
+
+[Desktop Action LayoutClassic]
+Name=Layout: Classic
+Exec=skyline-layout classic
+
+[Desktop Action LayoutDock]
+Name=Layout: Dock
+Exec=skyline-layout dock
+
+[Desktop Action LayoutMinimal]
+Name=Layout: Minimal
+Exec=skyline-layout minimal

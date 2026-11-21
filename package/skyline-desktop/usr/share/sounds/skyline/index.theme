@@ -1,0 +1,8 @@
+[Sound Theme]
+Name=SkyLine
+Comment=Soft SkyLine chimes
+Inherits=freedesktop
+Directories=stereo
+
+[stereo]
+OutputProfile=stereo

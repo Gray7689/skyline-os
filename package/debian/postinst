@@ -1,0 +1,17 @@
+#!/bin/sh
+# skyline-desktop: turn on SkyLine's timers, refresh icons and the boot splash.
+set -e
+if [ "$1" = configure ]; then
+	systemctl --global enable skyline-sky.timer skyline-update.timer >/dev/null 2>&1 || true
+	if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+		gtk-update-icon-cache -q -f -t /usr/share/icons/hicolor || true
+		gtk-update-icon-cache -q -f -t /usr/share/icons/SkyLine || true
+	fi
+	if command -v plymouth-set-default-theme >/dev/null 2>&1 && [ -d /usr/share/plymouth/themes/skyline ]; then
+		if [ "$(plymouth-set-default-theme 2>/dev/null || true)" != skyline ]; then
+			plymouth-set-default-theme skyline || true
+			update-initramfs -u || true
+		fi
+	fi
+fi
+exit 0
