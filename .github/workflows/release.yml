@@ -36,7 +36,7 @@ jobs:
             skyline-settings --help >/dev/null
             skyline-assistant --ask "make it night" | grep -qi night
             dpkg-divert --list skyline-desktop
-            grep -q SkyLine /etc/xdg/kcm-about-distrorc
+            grep -q skyline-logo /etc/xdg/kcm-about-distrorc
             apt-get remove -y skyline-desktop >/dev/null && test -f /etc/xdg/kcm-about-distrorc
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/skyline-desktop_*_all.deb >/dev/null
             export QT_QPA_PLATFORM=offscreen
