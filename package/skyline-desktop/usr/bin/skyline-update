@@ -8,6 +8,8 @@
 #
 # New versions come from the SkyLine GitHub releases (see /usr/share/skyline/update.conf).
 set -euo pipefail
+# shellcheck source=/dev/null
+. "${SKYLINE_LIB:-/usr/lib/skyline}/i18n.sh"
 
 # shellcheck disable=SC1091
 . /usr/share/skyline/update.conf
@@ -41,36 +43,36 @@ print(version, deb, sha)
 check() {
 	local info version deb
 	if ! info=$(latest_release 2>/dev/null); then
-		echo "Couldn't reach GitHub. Check your internet connection."
+		t "Couldn't reach GitHub. Check your internet connection."; echo
 		return 1
 	fi
 	read -r version deb _ <<<"$info"
 	if [[ -n $deb ]] && dpkg --compare-versions "$version" gt "$(installed_version)"; then
-		echo "SkyLine $version is available (you have $(installed_version))."
+		tf "SkyLine %s is available (you have %s)." "$version" "$(installed_version)"; echo
 		return 10
 	fi
-	echo "SkyLine is up to date ($(installed_version))."
+	tf "SkyLine is up to date (%s)." "$(installed_version)"; echo
 	return 0
 }
 
 install_update() {
 	local info version deb sha tmp
 	info=$(latest_release) || {
-		echo "Couldn't reach GitHub. Check your internet connection."
+		t "Couldn't reach GitHub. Check your internet connection."; echo
 		exit 1
 	}
 	read -r version deb sha <<<"$info"
 	if [[ -z $deb ]]; then
-		echo "The latest release has no SkyLine package yet. Try again later."
+		t "The latest release has no SkyLine package yet. Try again later."; echo
 		exit 1
 	fi
 	if ! dpkg --compare-versions "$version" gt "$(installed_version)"; then
-		echo "SkyLine is already up to date ($(installed_version))."
+		tf "SkyLine is already up to date (%s)." "$(installed_version)"; echo
 		exit 0
 	fi
 	tmp=$(mktemp -d)
 	trap 'rm -rf "$tmp"' EXIT
-	echo "Downloading SkyLine $version ..."
+	tf "Downloading SkyLine %s ..." "$version"; echo
 	curl -fL --progress-bar -o "$tmp/skyline-desktop_${version}_all.deb" "$deb"
 	if [[ -n $sha ]]; then
 		curl -fsSL -o "$tmp/expected.sha256" "$sha"
@@ -78,15 +80,15 @@ install_update() {
 		want=$(cut -d' ' -f1 "$tmp/expected.sha256")
 		got=$(sha256sum "$tmp/skyline-desktop_${version}_all.deb" | cut -d' ' -f1)
 		if [[ $want != "$got" ]]; then
-			echo "The download is damaged (checksum doesn't match). Nothing was installed."
+			t "The download is damaged (checksum doesn't match). Nothing was installed."; echo
 			exit 1
 		fi
-		echo "Download checked."
+		t "Download checked."; echo
 	fi
-	echo "Installing (SkyLine will ask for your password) ..."
+	t "Installing (SkyLine will ask for your password) ..."; echo
 	pkexec apt-get install -y -o Dpkg::Options::=--force-confnew "$tmp/skyline-desktop_${version}_all.deb"
 	echo
-	echo "SkyLine $version installed. Log out and back in to see everything new."
+	tf "SkyLine %s installed. Log out and back in to see everything new." "$version"; echo
 }
 
 notify() {
@@ -101,8 +103,8 @@ notify() {
 	fi
 	echo "$version" >"$STATE_DIR/update-notified"
 	local action
-	action=$(notify-send -a SkyLine -i skyline -A update="Update now" -A later="Later" \
-		"SkyLine $version is ready" "New features and fixes for your desktop." 2>/dev/null || true)
+	action=$(notify-send -a SkyLine -i skyline -A update="$(t "Update now")" -A later="$(t "Later")" \
+		"$(tf "SkyLine %s is ready" "$version")" "$(t "New features and fixes for your desktop.")" 2>/dev/null || true)
 	if [[ $action == update ]]; then
 		setsid -f konsole --hold -e skyline-update install >/dev/null 2>&1
 	fi

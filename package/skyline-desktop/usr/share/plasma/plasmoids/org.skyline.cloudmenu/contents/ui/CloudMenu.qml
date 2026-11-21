@@ -33,8 +33,10 @@ Item {
 
     function greeting() {
         const h = new Date().getHours()
-        const part = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"
-        return userName ? part + ", " + userName + "!" : part + "!"
+        if (h < 5) return userName ? i18n("Good night, %1!", userName) : i18n("Good night!")
+        if (h < 12) return userName ? i18n("Good morning, %1!", userName) : i18n("Good morning!")
+        if (h < 18) return userName ? i18n("Good afternoon, %1!", userName) : i18n("Good afternoon!")
+        return userName ? i18n("Good evening, %1!", userName) : i18n("Good evening!")
     }
 
     implicitWidth: 580
@@ -131,7 +133,7 @@ Item {
                     }
                     PC3.Label {
                         Layout.fillWidth: true
-                        text: "What do you want to do?"
+                        text: i18n("What do you want to do?")
                         opacity: 0.7
                     }
                 }
@@ -143,7 +145,7 @@ Item {
             id: search
             Layout.fillWidth: true
             Layout.preferredHeight: 42
-            placeholderText: "Search apps and files, or ask Puff…"
+            placeholderText: i18n("Search apps and files, or ask Puff…")
             focus: true
             Keys.onReturnPressed: {
                 if (menu.resultsModel && menu.resultsModel.count > 0) {
@@ -188,7 +190,7 @@ Item {
                         PuffPixels { size: 28; animate: false; Layout.preferredWidth: implicitWidth; Layout.preferredHeight: implicitHeight }
                         PC3.Label {
                             Layout.fillWidth: true
-                            text: "Ask Puff: “" + menu.query + "”"
+                            text: i18n("Ask Puff: “%1”", menu.query)
                             elide: Text.ElideRight
                         }
                     }
@@ -251,7 +253,7 @@ Item {
                     height: 36
                     cursorShape: Qt.PointingHandCursor
                     onClicked: menu.showAll = false
-                    PC3.Label { anchors.verticalCenter: parent.verticalCenter; text: "‹  Pinned"; opacity: 0.75 }
+                    PC3.Label { anchors.verticalCenter: parent.verticalCenter; text: "‹  " + i18n("Pinned"); opacity: 0.75 }
                 }
                 delegate: MouseArea {
                     required property int index
@@ -284,8 +286,8 @@ Item {
                 spacing: 6
                 RowLayout {
                     Layout.fillWidth: true
-                    PC3.Label { text: "Pinned"; opacity: 0.7; font.weight: Font.DemiBold; Layout.fillWidth: true }
-                    PC3.ToolButton { text: "All apps  ›"; onClicked: menu.showAll = true }
+                    PC3.Label { text: i18n("Pinned"); opacity: 0.7; font.weight: Font.DemiBold; Layout.fillWidth: true }
+                    PC3.ToolButton { text: i18n("All apps") + "  ›"; onClicked: menu.showAll = true }
                 }
                 GridView {
                     Layout.fillWidth: true
@@ -299,17 +301,17 @@ Item {
         }
 
         // ------------------------------------------------------------ sky
-        PC3.Label { text: "Sky"; opacity: 0.7; font.weight: Font.DemiBold }
+        PC3.Label { text: i18n("Sky"); opacity: 0.7; font.weight: Font.DemiBold }
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
             Repeater {
                 model: [
-                    { id: "sunrise", label: "Sunrise", bg: "#FFD8CC", fg: "#23264A" },
-                    { id: "day", label: "Day", bg: "#CDEBFF", fg: "#23264A" },
-                    { id: "dusk", label: "Dusk", bg: "#E4DBFF", fg: "#23264A" },
-                    { id: "night", label: "Night", bg: "#1B2150", fg: "#EEF0FF" },
-                    { id: "auto", label: "Follow the day", bg: "transparent", fg: "" }
+                    { id: "sunrise", label: i18n("Sunrise"), bg: "#FFD8CC", fg: "#23264A" },
+                    { id: "day", label: i18n("Day"), bg: "#CDEBFF", fg: "#23264A" },
+                    { id: "dusk", label: i18n("Dusk"), bg: "#E4DBFF", fg: "#23264A" },
+                    { id: "night", label: i18n("Night"), bg: "#1B2150", fg: "#EEF0FF" },
+                    { id: "auto", label: i18n("Follow the day"), bg: "transparent", fg: "" }
                 ]
                 delegate: MouseArea {
                     required property var modelData
@@ -353,11 +355,11 @@ Item {
             PC3.Label { text: menu.userName; font.weight: Font.DemiBold; Layout.fillWidth: true; elide: Text.ElideRight }
             Repeater {
                 model: [
-                    { label: "Lock", icon: "system-lock-screen", cmd: "loginctl lock-session" },
-                    { label: "Sleep", icon: "system-suspend", cmd: "systemctl suspend" },
-                    { label: "Restart", icon: "system-reboot",
+                    { label: i18n("Lock"), icon: "system-lock-screen", cmd: "loginctl lock-session" },
+                    { label: i18n("Sleep"), icon: "system-suspend", cmd: "systemctl suspend" },
+                    { label: i18n("Restart"), icon: "system-reboot",
                       cmd: "dbus-send --session --type=method_call --dest=org.kde.LogoutPrompt /LogoutPrompt org.kde.LogoutPrompt.promptReboot" },
-                    { label: "Off", icon: "system-shutdown",
+                    { label: i18n("Off"), icon: "system-shutdown",
                       cmd: "dbus-send --session --type=method_call --dest=org.kde.LogoutPrompt /LogoutPrompt org.kde.LogoutPrompt.promptShutDown" }
                 ]
                 delegate: PC3.ToolButton {

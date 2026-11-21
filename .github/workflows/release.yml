@@ -32,12 +32,25 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
               desktop-base sddm sddm-theme-breeze plymouth kinfocenter calamares-settings-debian >/dev/null
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/skyline-desktop_*_all.deb || { tail -n 40 /var/log/dpkg.log; exit 1; }
-            for t in skyline-sky skyline-layout skyline-taskbar skyline-gamemode skyline-play skyline-update; do $t --help >/dev/null; done
+            for t in skyline-sky skyline-layout skyline-taskbar skyline-gamemode skyline-play skyline-update skyline-windows; do $t --help >/dev/null; done
             skyline-settings --help >/dev/null
+            skyline-setup --help >/dev/null
             skyline-assistant --ask "make it night" | grep -qi night
+            # Italian: Puff, shell tools and the widget translations
+            SKYLINE_LANG=it skyline-assistant --ask "fai notte" | grep -q "Cielo impostato su notte"
+            (. /usr/lib/skyline/i18n.sh; SKYLINE_LANG=it; t "Update now") | grep -q "Aggiorna ora"
+            test -s /usr/share/locale/it/LC_MESSAGES/plasma_applet_org.skyline.cloudmenu.mo
+            # Window style, login screen built on Breeze (sddm-theme-breeze is installed above)
+            test -f /usr/share/aurorae/themes/SkyLine-Night/decoration.svg
+            test -f /usr/share/sddm/themes/skyline/BreezeMain.qml && test -f /usr/share/sddm/themes/skyline/Main.qml
+            grep -q "Current=skyline" /etc/sddm.conf.d/zzz-skyline-theme.conf
+            if [ -f /usr/share/plasma/look-and-feel/org.kde.breeze.desktop/contents/lockscreen/LockScreen.qml ]; then
+              test -f /usr/share/plasma/look-and-feel/org.skyline.desktop/contents/lockscreen/BreezeLockScreen.qml
+            fi
             dpkg-divert --list skyline-desktop
             grep -q skyline-logo /etc/xdg/kcm-about-distrorc
             apt-get remove -y skyline-desktop >/dev/null && test -f /etc/xdg/kcm-about-distrorc
+            test ! -e /usr/share/sddm/themes/skyline && test ! -e /etc/sddm.conf.d/zzz-skyline-theme.conf
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/skyline-desktop_*_all.deb >/dev/null
             export QT_QPA_PLATFORM=offscreen
             python3 - <<EOF
@@ -46,10 +59,13 @@ jobs:
           app = QApplication(sys.argv)
           S = importlib.machinery.SourceFileLoader("s", "/usr/bin/skyline-settings").load_module()
           A = importlib.machinery.SourceFileLoader("a", "/usr/bin/skyline-assistant").load_module()
-          s = S.SettingsWindow("sky"); a = A.AssistantWindow()
+          U = importlib.machinery.SourceFileLoader("u", "/usr/bin/skyline-setup").load_module()
+          s = S.SettingsWindow("sky"); a = A.AssistantWindow(); u = U.SetupWindow(0)
           for i in range(len(S.PAGES)):
               s.nav.setCurrentRow(i); app.processEvents()
-          a.close(); s.close()
+          for i in range(len(U.PAGES)):
+              u.go(i); app.processEvents()
+          a.close(); s.close(); u.close()
           print("SkyLine apps open fine on Debian 13")
           EOF
           '

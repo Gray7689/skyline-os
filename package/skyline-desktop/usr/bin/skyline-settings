@@ -2,6 +2,7 @@
 """SkyLine Settings: sky, weather, layout, taskbar, colors, apps, gaming, the Assistant and updates.
 
 Usage: skyline-settings [--page sky|layout|look|apps|gaming|assistant|updates|about]
+(About also has the language and "run the first-start setup again".)
 Everything else lives in KDE System Settings (the "More KDE settings" buttons open it).
 """
 import glob
@@ -11,156 +12,22 @@ import sys
 sys.path.insert(0, os.environ.get("SKYLINE_LIB", "/usr/lib/skyline"))
 import skyline_ai as ai  # noqa: E402
 import skyline_common as sk  # noqa: E402
+import skyline_i18n as i18n  # noqa: E402
+from skyline_i18n import tr  # noqa: E402
+from skyline_qt import (auto_thumb, card, heading, in_background, note, page, section,  # noqa: E402
+                        taskbar_thumb, thumb)
 
-from PyQt6.QtCore import QObject, QRectF, QSize, Qt, QThread, QTimer, pyqtSignal  # noqa: E402
-from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPixmap  # noqa: E402
-from PyQt6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QFrame,  # noqa: E402
-                             QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-                             QListWidgetItem, QMessageBox, QPushButton, QRadioButton,
-                             QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
+from PyQt6.QtCore import QSize, Qt, QTimer  # noqa: E402
+from PyQt6.QtGui import QIcon, QPixmap  # noqa: E402
+from PyQt6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QComboBox, QGridLayout,  # noqa: E402
+                             QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+                             QMessageBox, QPushButton, QRadioButton, QStackedWidget, QVBoxLayout,
+                             QWidget)
 
-PAGES = [("sky", "Sky", "weather-clear"), ("layout", "Layout", "view-grid"),
-         ("look", "Look", "preferences-desktop-theme"), ("apps", "Apps", "plasmadiscover"),
-         ("gaming", "Gaming", "input-gaming"), ("assistant", "Assistant", "dialog-messages"),
-         ("updates", "Updates", "system-software-update"), ("about", "About", "help-about")]
-
-CARD_STYLE = ("QToolButton { border: 2px solid transparent; border-radius: 12px; padding: 6px; }"
-              "QToolButton:hover { border-color: palette(mid); }"
-              "QToolButton:checked { border-color: palette(highlight); background: palette(alternate-base); }")
-
-
-# ------------------------------------------------------------------ small helpers
-
-class Worker(QObject):
-    """Runs a slow function (network, nvidia-smi) off the UI thread."""
-    done = pyqtSignal(object)
-
-    def __init__(self, fn, *args):
-        super().__init__()
-        self.fn, self.args = fn, args
-
-    def run(self):
-        try:
-            self.done.emit(self.fn(*self.args))
-        except Exception as e:  # report instead of crashing the window
-            self.done.emit(e)
-
-
-def in_background(parent, fn, *args, then):
-    thread = QThread(parent)
-    worker = Worker(fn, *args)
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
-    worker.done.connect(then)
-    worker.done.connect(thread.quit)
-    thread.finished.connect(worker.deleteLater)
-    parent._keep = getattr(parent, "_keep", []) + [(thread, worker)]
-    thread.start()
-
-
-def rounded(pixmap, radius=10):
-    out = QPixmap(pixmap.size())
-    out.fill(Qt.GlobalColor.transparent)
-    p = QPainter(out)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    path = QPainterPath()
-    path.addRoundedRect(QRectF(out.rect()), radius, radius)
-    p.setClipPath(path)
-    p.drawPixmap(0, 0, pixmap)
-    p.end()
-    return out
-
-
-def thumb(wallpaper, w=200, h=112):
-    pm = QPixmap(str(sk.WALLPAPERS / wallpaper / "contents/screenshot.png"))
-    if pm.isNull():
-        pm = QPixmap(w, h)
-        pm.fill(QColor("#FFD8CC"))
-    return pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-
-
-def auto_thumb(w=200, h=112):
-    """Four skies in one picture, for 'Follow the time of day'."""
-    out = QPixmap(w, h)
-    p = QPainter(out)
-    for i, wp in enumerate(["SkyLine-Peach", "SkyLine-Sky", "SkyLine-Dusk", "SkyLine-Night"]):
-        part = thumb(wp, w, h)
-        x = i * w // 4
-        p.drawPixmap(x, 0, part, x, 0, w // 4 + 1, h)
-    p.end()
-    return out
-
-
-def taskbar_thumb(style, w=160, h=90):
-    pm = thumb("SkyLine-Peach", w, h)
-    p = QPainter(pm)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    bar = QRectF(6, h - 20, w - 12, 14)
-    fills = {"auto": QColor(255, 241, 236, 235), "black": QColor(20, 20, 24), "white": QColor(255, 255, 255),
-             "glass": QColor(255, 255, 255, 110), "clear": QColor(0, 0, 0, 0)}
-    p.setBrush(fills[style])
-    p.setPen(Qt.PenStyle.NoPen)
-    p.drawRoundedRect(bar, 5, 5)
-    icon = QColor("#FFFFFF") if style == "black" else QColor("#23264A")
-    p.setBrush(icon)
-    for i in range(5):
-        p.drawRoundedRect(QRectF(12 + i * 13, h - 17, 8, 8), 2, 2)
-    p.end()
-    return pm
-
-
-def card(text, pixmap, size):
-    b = QToolButton()
-    b.setText(text)
-    b.setIcon(QIcon(rounded(pixmap)))
-    b.setIconSize(size)
-    b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-    b.setCheckable(True)
-    b.setStyleSheet(CARD_STYLE)
-    return b
-
-
-def heading(text):
-    label = QLabel(text)
-    f = label.font()
-    f.setPointSizeF(f.pointSizeF() * 1.5)
-    f.setWeight(QFont.Weight.DemiBold)
-    label.setFont(f)
-    return label
-
-
-def section(text):
-    label = QLabel(text)
-    f = label.font()
-    f.setWeight(QFont.Weight.DemiBold)
-    label.setFont(f)
-    return label
-
-
-def note(text):
-    label = QLabel(text)
-    label.setWordWrap(True)
-    label.setStyleSheet("color: palette(placeholder-text);")
-    return label
-
-
-def page(*widgets):
-    body = QWidget()
-    v = QVBoxLayout(body)
-    v.setContentsMargins(28, 24, 28, 24)
-    v.setSpacing(12)
-    for w in widgets:
-        if isinstance(w, QWidget):
-            v.addWidget(w)
-        else:
-            v.addLayout(w)
-    v.addStretch(1)
-    scroll = QScrollArea()
-    scroll.setWidgetResizable(True)
-    scroll.setFrameShape(QFrame.Shape.NoFrame)
-    scroll.setWidget(body)
-    return scroll
-
+PAGES = [("sky", tr("Sky"), "weather-clear"), ("layout", tr("Layout"), "view-grid"),
+         ("look", tr("Look"), "preferences-desktop-theme"), ("apps", tr("Apps"), "plasmadiscover"),
+         ("gaming", tr("Gaming"), "input-gaming"), ("assistant", tr("Assistant"), "dialog-messages"),
+         ("updates", tr("Updates"), "system-software-update"), ("about", tr("About"), "help-about")]
 
 # ------------------------------------------------------------------ pages
 
@@ -179,29 +46,29 @@ class SkyPage:
             self.group.addButton(b)
             grid.addWidget(b, i // 3, i % 3)
 
-        self.weather = QCheckBox("Show the real weather in the sky (rain, snow, clouds)")
+        self.weather = QCheckBox(tr("Show the real weather in the sky (rain, snow, clouds)"))
         self.weather.setChecked(s["weather"] == "on")
         self.weather.toggled.connect(self.toggle_weather)
         self.city = QLineEdit()
-        self.city.setPlaceholderText("Your city, for example Rome")
-        find = QPushButton("Set city")
+        self.city.setPlaceholderText(tr("Your city, for example Rome"))
+        find = QPushButton(tr("Set city"))
         find.clicked.connect(self.set_city)
         self.city.returnPressed.connect(self.set_city)
         row = QHBoxLayout()
         row.addWidget(self.city, 1)
         row.addWidget(find)
-        self.place = note("City: " + s.get("place", "not set yet"))
-        self.own = QCheckBox("Keep my own wallpaper (SkyLine only changes the colors)")
+        self.place = note(tr("City: {place}").format(place=s.get("place", tr("not set yet"))))
+        self.own = QCheckBox(tr("Keep my own wallpaper (SkyLine only changes the colors)"))
         self.own.setChecked(s.get("wallpaper", "auto") == "mine")
         self.own.toggled.connect(lambda on: self.window.toast(sk.keep_own_wallpaper(on)))
 
-        self.widget = page(heading("Sky"),
-                           note("Your wallpaper, window colors and lock screen. Pick one, or let SkyLine follow "
-                                "the time of day: sunrise 6–10, day 10–17, dusk 17–20, night after 20."),
+        self.widget = page(heading(tr("Sky")),
+                           note(tr("Your wallpaper, window colors and lock screen. Pick one, or let SkyLine follow "
+                                "the time of day: sunrise 6–10, day 10–17, dusk 17–20, night after 20.")),
                            grid, self.own,
-                           note("Picked your own wallpaper in KDE? SkyLine notices and leaves it alone. "
-                                "Choosing a sky above brings the SkyLine wallpaper back."),
-                           section("Weather"), self.weather, row, self.place)
+                           note(tr("Picked your own wallpaper in KDE? SkyLine notices and leaves it alone. "
+                                "Choosing a sky above brings the SkyLine wallpaper back.")),
+                           section(tr("Weather")), self.weather, row, self.place)
 
     def pick(self, mode):
         self.own.blockSignals(True)
@@ -211,20 +78,20 @@ class SkyPage:
 
     def toggle_weather(self, on):
         if on and "lat" not in sk.sky_settings():
-            self.window.toast("Set your city first, then the sky will show its weather.")
+            self.window.toast(tr("Set your city first, then the sky will show its weather."))
         self.window.toast(sk.set_weather(on))
 
     def set_city(self):
         name = self.city.text().strip()
         if not name:
             return
-        self.place.setText("Looking for " + name + "…")
+        self.place.setText(tr("Looking for {place}…").format(place=name))
         in_background(self.window, sk.set_weather, True, name, then=self.city_done)
 
     def city_done(self, result):
         msg = str(result)
         self.window.toast(msg)
-        self.place.setText("City: " + sk.sky_settings().get("place", "not set yet"))
+        self.place.setText(tr("City: {place}").format(place=sk.sky_settings().get("place", tr("not set yet"))))
         self.weather.blockSignals(True)
         self.weather.setChecked(sk.sky_settings().get("weather") == "on")
         self.weather.blockSignals(False)
@@ -249,14 +116,14 @@ class LayoutPage:
             self.group.addButton(b)
             row.addWidget(b, i // 3, i % 3)
         row.setColumnStretch(3, 1)
-        self.widget = page(heading("Layout"),
-                           note("Where your taskbar and app launcher sit. After switching you can still drag, "
-                                "resize and edit every panel: right-click it and choose \"Show Panel Configuration\"."),
+        self.widget = page(heading(tr("Layout")),
+                           note(tr("Where your taskbar and app launcher sit. After switching you can still drag, "
+                                "resize and edit every panel: right-click it and choose \"Show Panel Configuration\".")),
                            row)
 
     def choose(self, name):
-        answer = QMessageBox.question(self.window, "Change layout",
-                                      "Switch to this layout? Your current panels will be replaced.")
+        answer = QMessageBox.question(self.window, tr("Change layout"),
+                                      tr("Switch to this layout? Your current panels will be replaced."))
         if answer == QMessageBox.StandardButton.Yes:
             self.window.toast(sk.set_layout(name))
 
@@ -279,8 +146,8 @@ class LookPage:
         accents = QHBoxLayout()
         chosen = sk.sky_settings().get("accent", "none")
         for name, color in sk.ACCENTS.items():
-            b = QPushButton("Sky" if color is None else "")
-            b.setToolTip("Match the sky" if color is None else name.capitalize())
+            b = QPushButton(tr("Sky") if color is None else "")
+            b.setToolTip(tr("Match the sky") if color is None else tr(sk.ACCENT_NAMES[name]))
             b.setFixedSize(QSize(56 if color is None else 34, 34))
             ring = "palette(text)" if (color or "none") == chosen else "palette(mid)"
             fill = color or "palette(button)"
@@ -289,8 +156,8 @@ class LookPage:
             accents.addWidget(b)
         accents.addStretch(1)
 
-        self.icons_skyline = QRadioButton("SkyLine folders (pastel)")
-        self.icons_breeze = QRadioButton("Breeze (KDE default)")
+        self.icons_skyline = QRadioButton(tr("SkyLine folders (pastel)"))
+        self.icons_breeze = QRadioButton(tr("Breeze (KDE default)"))
         code, out = sk.run("kreadconfig6", "--file", "kdeglobals", "--group", "Icons", "--key", "Theme", timeout=5)
         (self.icons_skyline if out.strip() == "SkyLine" else self.icons_breeze).setChecked(True)
         self.icons_skyline.toggled.connect(lambda on: on and self.set_icons("SkyLine"))
@@ -300,40 +167,55 @@ class LookPage:
         icons.addWidget(self.icons_breeze)
         icons.addStretch(1)
 
-        self.sounds = QCheckBox("SkyLine sounds (soft chimes)")
+        win = sk.read_kv(sk.CONFIG_DIR / "windows.conf")
+        self.win_skyline = QRadioButton(tr("SkyLine: three round buttons, colors follow the sky"))
+        self.win_breeze = QRadioButton(tr("Breeze: KDE's classic look"))
+        (self.win_skyline if win.get("style") == "skyline" else self.win_breeze).setChecked(True)
+        self.win_skyline.toggled.connect(lambda on: on and self.set_windows("skyline"))
+        self.win_breeze.toggled.connect(lambda on: on and self.set_windows("breeze"))
+        self.win_left = QCheckBox(tr("Window buttons on the left"))
+        self.win_left.setChecked(win.get("buttons", "left") == "left")
+        self.win_left.toggled.connect(lambda on: self.set_windows("left" if on else "right"))
+
+        self.sounds = QCheckBox(tr("SkyLine sounds (soft chimes)"))
         code, out = sk.run("kreadconfig6", "--file", "kdeglobals", "--group", "Sounds", "--key", "Theme", timeout=5)
         self.sounds.setChecked(out.strip() == "skyline")
         self.sounds.toggled.connect(self.set_sounds)
 
-        more_btn = QPushButton("More KDE appearance settings…")
+        more_btn = QPushButton(tr("More KDE appearance settings…"))
         more_btn.clicked.connect(lambda: sk.start("systemsettings", "kcm_lookandfeel"))
         more = QHBoxLayout()
         more.addWidget(more_btn)
         more.addStretch(1)
 
-        self.widget = page(heading("Look"),
-                           section("Taskbar"), bars,
-                           note("Black and white are solid. Glass is see-through with blur. Clear is invisible: "
-                                "only the icons float on your wallpaper."),
-                           section("Accent color"), accents,
-                           note("Used for highlights, buttons and selections. \"Sky\" changes with the time of day."),
-                           section("Icons"), icons, section("Sounds"), self.sounds, more)
+        self.widget = page(heading(tr("Look")),
+                           section(tr("Taskbar")), bars,
+                           note(tr("Black and white are solid. Glass is see-through with blur. Clear is invisible: "
+                                "only the icons float on your wallpaper.")),
+                           section(tr("Accent color")), accents,
+                           note(tr("Used for highlights, buttons and selections. \"Sky\" changes with the time of day.")),
+                           section(tr("Window style")), self.win_skyline, self.win_breeze, self.win_left,
+                           section(tr("Icons")), icons, section(tr("Sounds")), self.sounds, more)
+
+    def set_windows(self, choice):
+        sk.start("skyline-windows", choice)
+        self.window.toast(tr("Window style changed."))
 
     def set_icons(self, theme):
         sk.run("kwriteconfig6", "--file", "kdeglobals", "--group", "Icons", "--key", "Theme", theme, timeout=5)
         helpers = glob.glob("/usr/lib/*/libexec/plasma-changeicons") + glob.glob("/usr/libexec/plasma-changeicons")
         if helpers:
             sk.start(helpers[0], theme)
-            self.window.toast("Icons changed.")
+            self.window.toast(tr("Icons changed."))
         else:
-            self.window.toast("Icons will change after you log out and back in.")
+            self.window.toast(tr("Icons will change after you log out and back in."))
 
     def set_sounds(self, on):
         if on:
             sk.run("kwriteconfig6", "--file", "kdeglobals", "--group", "Sounds", "--key", "Theme", "skyline", timeout=5)
         else:
             sk.run("kwriteconfig6", "--file", "kdeglobals", "--group", "Sounds", "--key", "Theme", "--delete", timeout=5)
-        self.window.toast("SkyLine sounds on." if on else "Sounds back to KDE's default.")
+        self.window.toast(tr("SkyLine sounds on.") if on else tr("Sounds back to KDE's default."))
 
 
 class AppsPage:
@@ -345,7 +227,7 @@ class AppsPage:
         for i, (app_id, (name, desc)) in enumerate(sk.APPS.items()):
             title = section(name)
             sub = note(desc)
-            b = QPushButton("Install")
+            b = QPushButton(tr("Install"))
             b.setFixedWidth(120)
             b.clicked.connect(lambda _=False, a=app_id: self.window.toast(sk.install_apps([a])))
             self.buttons[app_id] = b
@@ -353,17 +235,17 @@ class AppsPage:
             grid.addWidget(sub, i, 1)
             grid.addWidget(b, i, 2)
         grid.setColumnStretch(1, 1)
-        several = QPushButton("Pick several at once…")
+        several = QPushButton(tr("Pick several at once…"))
         several.clicked.connect(lambda: sk.start("skyline-apps"))
-        store = QPushButton("Browse all apps (Discover)")
+        store = QPushButton(tr("Browse all apps (Discover)"))
         store.clicked.connect(lambda: sk.start("plasma-discover"))
         row = QHBoxLayout()
         row.addWidget(several)
         row.addWidget(store)
         row.addStretch(1)
-        self.widget = page(heading("Apps"),
-                           note("Everyday apps in one click. They come from Flathub (Claude from Anthropic's own "
-                                "repository) and update through Discover."), grid, row)
+        self.widget = page(heading(tr("Apps")),
+                           note(tr("Everyday apps in one click. They come from Flathub (Claude from Anthropic's own "
+                                "repository) and update through Discover.")), grid, row)
         QTimer.singleShot(200, lambda: in_background(self.window, sk.installed_apps, then=self.mark_installed))
 
     def mark_installed(self, installed):
@@ -372,7 +254,7 @@ class AppsPage:
         for app_id in installed:
             b = self.buttons.get(app_id)
             if b:
-                b.setText("Installed")
+                b.setText(tr("Installed"))
                 b.setEnabled(False)
 
 
@@ -387,35 +269,35 @@ class GamingPage:
         self.paint_toggle()
         self.toggle.toggled.connect(self.flip)
 
-        self.gpu = note("Checking your graphics card…")
-        self.driver = QPushButton("Install NVIDIA driver")
+        self.gpu = note(tr("Checking your graphics card…"))
+        self.driver = QPushButton(tr("Install NVIDIA driver"))
         self.driver.hide()
         self.driver.clicked.connect(lambda: self.window.toast(sk.install_apps(["nvidia"])))
 
         native = QLineEdit(sk.STEAM_NATIVE_OPTION)
         flat = QLineEdit(sk.STEAM_FLATPAK_OPTION)
         grid = QGridLayout()
-        for row, (label, field) in enumerate([("Steam from SkyLine Apps (Flathub)", flat),
-                                              ("Steam installed from Debian", native)]):
+        for row, (label, field) in enumerate([(tr("Steam from SkyLine Apps (Flathub)"), flat),
+                                              (tr("Steam installed from Debian"), native)]):
             field.setReadOnly(True)
-            copy = QPushButton("Copy")
+            copy = QPushButton(tr("Copy"))
             copy.clicked.connect(lambda _=False, f=field: (QApplication.clipboard().setText(f.text()),
-                                                         self.window.toast("Copied. Paste it in Steam.")))
+                                                         self.window.toast(tr("Copied. Paste it in Steam."))))
             grid.addWidget(QLabel(label), row, 0)
             grid.addWidget(field, row, 1)
             grid.addWidget(copy, row, 2)
 
-        self.widget = page(heading("Gaming"), section("Game Mode"), self.toggle,
-                           note("Maximum performance and no notifications while you play. Turn it off when you're done."),
-                           section("Graphics card"), self.gpu, self.driver,
-                           section("Play on the NVIDIA card"),
-                           note("On laptops with two graphics chips, games start on the power-saving one. In Steam, "
-                                "right-click a game > Properties > Launch Options, and paste:"), grid)
+        self.widget = page(heading(tr("Gaming")), section(tr("Game Mode")), self.toggle,
+                           note(tr("Maximum performance and no notifications while you play. Turn it off when you're done.")),
+                           section(tr("Graphics card")), self.gpu, self.driver,
+                           section(tr("Play on the NVIDIA card")),
+                           note(tr("On laptops with two graphics chips, games start on the power-saving one. In Steam, "
+                                "right-click a game > Properties > Launch Options, and paste:")), grid)
         QTimer.singleShot(300, lambda: in_background(self.window, sk.nvidia_status, then=self.show_gpu))
 
     def paint_toggle(self):
         on = self.toggle.isChecked()
-        self.toggle.setText("Game Mode is ON" if on else "Turn on Game Mode")
+        self.toggle.setText(tr("Game Mode is ON") if on else tr("Turn on Game Mode"))
 
     def flip(self, on):
         self.paint_toggle()
@@ -424,24 +306,24 @@ class GamingPage:
     def show_gpu(self, status):
         status = str(status)
         if status == "none":
-            self.gpu.setText("No NVIDIA card found. Your games use the built-in graphics.")
+            self.gpu.setText(tr("No NVIDIA card found. Your games use the built-in graphics."))
         elif status == "missing":
-            self.gpu.setText("NVIDIA card found, but its driver isn't installed yet. Install it for full speed "
-                             "and external monitors.")
+            self.gpu.setText(tr("NVIDIA card found, but its driver isn't installed yet. Install it for full speed "
+                             "and external monitors."))
             self.driver.show()
         elif status.startswith("ok: "):
-            self.gpu.setText("NVIDIA driver working: " + status[4:])
+            self.gpu.setText(tr("NVIDIA driver working: {card}").format(card=status[4:]))
         else:
-            self.gpu.setText("Couldn't check the graphics card.")
+            self.gpu.setText(tr("Couldn't check the graphics card."))
 
 
 class AssistantPage:
     def __init__(self, window):
         self.window = window
         self.status = note("")
-        connect = QPushButton("Connect an AI…")
+        connect = QPushButton(tr("Connect an AI…"))
         connect.clicked.connect(self.connect)
-        open_puff = QPushButton("Open Puff")
+        open_puff = QPushButton(tr("Open Puff"))
         open_puff.clicked.connect(lambda: sk.start("skyline-assistant"))
         row = QHBoxLayout()
         row.addWidget(connect)
@@ -449,31 +331,32 @@ class AssistantPage:
         row.addStretch(1)
 
         self.autostart_file = os.path.expanduser("~/.config/autostart/skyline-assistant.desktop")
-        self.autostart = QCheckBox("Open Puff when I log in")
+        self.autostart = QCheckBox(tr("Open Puff when I log in"))
         self.autostart.setChecked(os.path.exists(self.autostart_file))
         self.autostart.toggled.connect(self.set_autostart)
 
-        self.widget = page(heading("Assistant"),
-                           note("Puff changes your sky, layout, taskbar, Game Mode and apps when you ask. Without an "
+        self.widget = page(heading(tr("Assistant")),
+                           note(tr("Puff changes your sky, layout, taskbar, Game Mode and apps when you ask. Without an "
                                 "AI, Puff understands simple requests in English and Italian. Connect an AI with your "
                                 "own API key and Puff chats with you about anything: Claude, OpenAI, NVIDIA, Groq, "
                                 "Google Gemini, OpenRouter, Ollama (on this computer, no key) or any "
-                                "OpenAI-compatible server."),
+                                "OpenAI-compatible server.")),
                            self.status, row, self.autostart,
-                           note("Your key is saved only on this computer. Messages you send Puff go to the AI service "
-                                "you pick."))
+                           note(tr("Your key is saved only on this computer. Messages you send Puff go to the AI service "
+                                "you pick.")))
         self.refresh()
 
     def refresh(self):
         cfg = ai.load()
         if ai.ready(cfg):
-            self.status.setText(f"Connected: {ai.PROVIDERS[cfg['provider']]['label']}, model {cfg['model']}.")
+            self.status.setText(tr("Connected: {service}, model {model}.").format(
+                service=ai.PROVIDERS[cfg["provider"]]["label"], model=cfg["model"]))
         else:
-            self.status.setText("No AI connected. Puff works with simple commands only.")
+            self.status.setText(tr("No AI connected. Puff works with simple commands only."))
 
     def connect(self):
         if ai.setup_dialog(self.window):
-            self.window.toast("AI connected. Open Puff and say hi!")
+            self.window.toast(tr("AI connected. Open Puff and say hi!"))
         self.refresh()
 
     def set_autostart(self, on):
@@ -489,25 +372,25 @@ class AssistantPage:
 class UpdatesPage:
     def __init__(self, window):
         self.window = window
-        self.status = note(f"You have SkyLine {sk.skyline_version()}.")
-        check = QPushButton("Check for SkyLine updates")
+        self.status = note(tr("You have SkyLine {version}.").format(version=sk.skyline_version()))
+        check = QPushButton(tr("Check for SkyLine updates"))
         check.clicked.connect(self.check)
-        self.update = QPushButton("Update now")
+        self.update = QPushButton(tr("Update now"))
         self.update.setEnabled(False)
         self.update.clicked.connect(lambda: sk.in_terminal("skyline-update", "install"))
-        system = QPushButton("Debian and app updates (Discover)…")
+        system = QPushButton(tr("Debian and app updates (Discover)…"))
         system.clicked.connect(lambda: sk.start("skyline-update", "system"))
         row = QHBoxLayout()
         row.addWidget(check)
         row.addWidget(self.update)
         row.addStretch(1)
-        self.widget = page(heading("Updates"),
-                           note("SkyLine checks once a day and shows a notification when a new version is out. "
-                                "Debian's own updates and your apps update through Discover."),
+        self.widget = page(heading(tr("Updates")),
+                           note(tr("SkyLine checks once a day and shows a notification when a new version is out. "
+                                "Debian's own updates and your apps update through Discover.")),
                            self.status, row, system)
 
     def check(self):
-        self.status.setText("Checking…")
+        self.status.setText(tr("Checking…"))
         in_background(self.window, sk.run, "skyline-update", "check", then=self.checked)
 
     def checked(self, result):
@@ -515,25 +398,48 @@ class UpdatesPage:
             self.status.setText(str(result))
             return
         code, out = result
-        self.status.setText(out or "Done.")
+        self.status.setText(out or tr("Done."))
         self.update.setEnabled(code == 10)
 
 
 class AboutPage:
     def __init__(self, window):
+        self.window = window
         logo = QLabel()
         logo.setPixmap(QPixmap(sk.LOGO).scaled(96, 96, Qt.AspectRatioMode.KeepAspectRatio,
                                                Qt.TransformationMode.SmoothTransformation))
+        self.lang = QComboBox()
+        current = i18n.language()
+        for code, name in i18n.LANGUAGES.items():
+            self.lang.addItem(name, code)
+        self.lang.setCurrentIndex(max(0, self.lang.findData(current)))
+        self.lang.currentIndexChanged.connect(self.set_language)
+        lang_row = QHBoxLayout()
+        lang_row.addWidget(self.lang)
+        lang_row.addStretch(1)
+        setup = QPushButton(tr("Run the first-start setup again…"))
+        setup.clicked.connect(lambda: sk.start("skyline-setup"))
+        setup_row = QHBoxLayout()
+        setup_row.addWidget(setup)
+        setup_row.addStretch(1)
         self.widget = page(logo, heading(f"SkyLine {sk.skyline_version()}"),
-                           note("A cute, very customizable desktop. Debian 13 underneath, KDE Plasma 6 on top, "
-                                "and a sky that follows your day."),
-                           note("Made by ezey."))
+                           note(tr("A cute, very customizable desktop. Debian 13 underneath, KDE Plasma 6 on top, "
+                                "and a sky that follows your day.")),
+                           note(tr("Made by ezey.")),
+                           section(tr("Language")), lang_row,
+                           note(tr("Log out and back in once to see all of KDE in your language.")),
+                           section(tr("Setup")), setup_row)
+
+    def set_language(self):
+        code = self.lang.currentData()
+        if i18n.set_language(code):
+            self.window.toast(tr("Language changed. Log out and back in to see it everywhere."))
 
 
 class SettingsWindow(QWidget):
     def __init__(self, start_page="sky"):
         super().__init__()
-        self.setWindowTitle("SkyLine Settings")
+        self.setWindowTitle(tr("SkyLine Settings"))
         self.setWindowIcon(QIcon.fromTheme("skyline", QIcon(sk.LOGO)))
         self.resize(1000, 680)
 
@@ -567,7 +473,7 @@ class SettingsWindow(QWidget):
         left = QVBoxLayout()
         left.addLayout(top)
         left.addWidget(self.nav, 1)
-        kde = QPushButton("More KDE settings…")
+        kde = QPushButton(tr("More KDE settings…"))
         kde.clicked.connect(lambda: sk.start("systemsettings"))
         left.addWidget(kde)
 

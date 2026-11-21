@@ -1,3 +1,17 @@
+## SkyLine 1.3
+
+**SkyLine in Italian, a friendly first start, and the rest of SkyLine Shell.**
+- **Italiano:** SkyLine Settings, Puff, the Cloud Menu, the dock, the top bar, notifications, dialogs and installers all speak Italian. SkyLine follows KDE's language; switch it in SkyLine Settings > About (or in SkyLine Setup). New SkyLine USB sticks include Italian for Firefox and LibreOffice too.
+- **SkyLine Setup:** a first-start setup with Puff: language, Wi-Fi, sky and weather, desktop layout and window style, your apps (and the NVIDIA driver if needed), and connecting an AI. It opens by itself for new users; run it again from SkyLine Settings > About.
+- **SkyLine Dock:** SkyLine's own dock for your pinned apps and open windows. Icons grow on hover, bounce while starting, and show a dot when running. Right-click to pin, unpin, open a new window or close.
+- **Sky pill (top bar):** the sky and the temperature, with quick switches: sky, Game Mode, real weather, taskbar look, Puff, and an "Update now" banner when a new SkyLine is out.
+- **Window style:** new title bars with three round buttons (close, minimize, maximize). Their colors change with the sky. SkyLine Settings > Look lets you pick SkyLine or Breeze, buttons left or right.
+- **Lock screen and login screen:** Puff and a greeting in the corner, on top of KDE's own password handling, so they stay as reliable as before.
+- **Boot screen:** "SkyLine booting up…" under the logo.
+- **Puff:** understands "update skyline" / "aggiorna skyline", and replies in Italian when the desktop is in Italian.
+
+The SkyLine Shell layout now uses all of these. Pick it in SkyLine Settings > Layout.
+
 ## SkyLine 1.2
 
 **SkyLine Shell, part 1: SkyLine's own desktop begins.**
@@ -31,7 +45,7 @@
 
 **Install on SkyLine 1.0**
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.2.0/skyline-desktop_1.2.0_all.deb
-sudo apt install ./skyline-desktop_1.2.0_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.3.0/skyline-desktop_1.3.0_all.deb
+sudo apt install ./skyline-desktop_1.3.0_all.deb
 ```
 Then log out and back in.

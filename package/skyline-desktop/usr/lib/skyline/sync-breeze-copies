@@ -1,0 +1,52 @@
+#!/bin/sh
+# Build SkyLine's lock screen and login screen on top of the installed Breeze ones.
+# Runs when skyline-desktop is installed, and again (dpkg trigger) whenever Breeze is updated,
+# so the copied Breeze parts always match the Plasma version on this computer.
+# If Breeze isn't there, SkyLine's versions are removed and KDE's defaults are used: never a broken screen.
+set -eu
+
+SKY=/usr/share/skyline
+LNF=/usr/share/plasma/look-and-feel
+BREEZE_LNF=$LNF/org.kde.breeze.desktop/contents
+OUR_LNF=$LNF/org.skyline.desktop/contents
+BREEZE_SDDM=/usr/share/sddm/themes/breeze
+OUR_SDDM=/usr/share/sddm/themes/skyline
+SDDM_CONF=/etc/sddm.conf.d/zzz-skyline-theme.conf
+
+fix_perms() {
+	chmod 0755 "$1"
+	find "$1" -type d -exec chmod 0755 {} +
+	find "$1" -type f -exec chmod 0644 {} +
+}
+
+# --- lock screen
+rm -rf "$OUR_LNF/lockscreen" "$OUR_LNF/components"
+if [ -f "$BREEZE_LNF/lockscreen/LockScreen.qml" ] && [ -f "$SKY/lockscreen/LockScreen.qml" ]; then
+	tmp=$(mktemp -d)
+	cp -a "$BREEZE_LNF/lockscreen/." "$tmp/"
+	mv "$tmp/LockScreen.qml" "$tmp/BreezeLockScreen.qml"
+	cp "$SKY/lockscreen/"*.qml "$tmp/"
+	fix_perms "$tmp"
+	mv "$tmp" "$OUR_LNF/lockscreen"
+	# Older Breeze versions import shared parts from ../components
+	if grep -rqs '"\.\./components"' "$OUR_LNF/lockscreen" && [ -d "$BREEZE_LNF/components" ]; then
+		cp -a "$BREEZE_LNF/components" "$OUR_LNF/components"
+		fix_perms "$OUR_LNF/components"
+	fi
+fi
+
+# --- login screen
+rm -rf "$OUR_SDDM"
+rm -f "$SDDM_CONF"
+if [ -f "$BREEZE_SDDM/Main.qml" ] && [ -f "$BREEZE_SDDM/metadata.desktop" ] && [ -f "$SKY/sddm/Main.qml" ]; then
+	tmp=$(mktemp -d)
+	cp -a "$BREEZE_SDDM/." "$tmp/"
+	mv "$tmp/Main.qml" "$tmp/BreezeMain.qml"
+	cp "$SKY/sddm/"*.qml "$tmp/"
+	sed -i -e 's/^Name=.*/Name=SkyLine/' -e 's/^Theme-Id=.*/Theme-Id=skyline/' \
+		-e 's/^Description=.*/Description=SkyLine login screen/' "$tmp/metadata.desktop"
+	fix_perms "$tmp"
+	mv "$tmp" "$OUR_SDDM"
+	mkdir -p /etc/sddm.conf.d
+	printf '# Written by skyline-desktop: use the SkyLine login screen.\n[Theme]\nCurrent=skyline\n' >"$SDDM_CONF"
+fi

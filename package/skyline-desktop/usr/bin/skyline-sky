@@ -10,6 +10,7 @@
 #   skyline-sky wallpaper mine|auto      mine = never change my wallpaper, only colors
 #   skyline-sky menu                     pick in a small window
 #   skyline-sky tick                     apply the right sky now (timer and login use this)
+#   skyline-sky json                     the current sky and weather as JSON (for widgets)
 set -euo pipefail
 
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/skyline"
@@ -21,7 +22,7 @@ WALLPAPERS=/usr/share/wallpapers
 APPLETS="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-org.kde.plasma.desktop-appletsrc"
 
 usage() {
-	sed -n '2,14s/^# \{0,1\}//p' "$0"
+	sed -n '2,15s/^# \{0,1\}//p' "$0"
 }
 
 get() { # get KEY DEFAULT
@@ -209,18 +210,22 @@ apply() {
 
 	mkdir -p "$STATE_DIR"
 	echo "$key" >"$STATE"
+	# Title bars in the SkyLine window style follow the sky too.
+	if command -v skyline-windows >/dev/null 2>&1; then skyline-windows sync >/dev/null 2>&1 || true; fi
 }
 
 menu() {
 	local m choice
 	m=$(mode)
 	state() { [[ $m == "$1" ]] && echo on || echo off; }
-	choice=$(kdialog --title "SkyLine Sky" --icon skyline --radiolist "How should your sky look?" \
-		auto "Follow the time of day" "$(state auto)" \
-		sunrise "Sunrise (peach)" "$(state sunrise)" \
-		day "Day (blue sky)" "$(state day)" \
-		dusk "Dusk (lavender)" "$(state dusk)" \
-		night "Night (dark)" "$(state night)") || exit 0
+	# shellcheck source=/dev/null
+	. "${SKYLINE_LIB:-/usr/lib/skyline}/i18n.sh"
+	choice=$(kdialog --title "$(t "SkyLine Sky")" --icon skyline --radiolist "$(t "How should your sky look?")" \
+		auto "$(t "Follow the time of day")" "$(state auto)" \
+		sunrise "$(t "Sunrise (peach)")" "$(state sunrise)" \
+		day "$(t "Day (blue sky)")" "$(state day)" \
+		dusk "$(t "Dusk (lavender)")" "$(state dusk)" \
+		night "$(t "Night (dark)")" "$(state night)") || exit 0
 	[[ -n $choice ]] && "$0" "$choice"
 }
 
@@ -281,6 +286,13 @@ case "${1:-status}" in
 		apply "$(current_sky)" force
 		;;
 	menu) menu ;;
+	json)
+		# For SkyLine's widgets (the sky pill in the top bar).
+		python3 -c 'import json, sys; print(json.dumps(dict(zip(
+    ["mode", "sky", "weather", "kind", "place", "lat", "lon", "wallpaper"], sys.argv[1:]))))' \
+			"$(mode)" "$(current_sky)" "$(get weather off)" "$(current_weather)" "$(get place '')" \
+			"$(get lat '')" "$(get lon '')" "$(get wallpaper auto)"
+		;;
 	status)
 		echo "mode: $(mode)"
 		echo "sky now: $(current_sky)"

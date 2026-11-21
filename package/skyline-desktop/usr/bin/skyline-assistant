@@ -4,7 +4,6 @@
 Works offline for everyday requests ("make it night", "dock layout", "install discord").
 Add a Claude or Groq API key in SkyLine Settings > Assistant to chat about anything.
 """
-import math
 import os
 import re
 import sys
@@ -12,20 +11,22 @@ import sys
 sys.path.insert(0, os.environ.get("SKYLINE_LIB", "/usr/lib/skyline"))
 import skyline_ai as ai  # noqa: E402
 import skyline_common as sk  # noqa: E402
+from skyline_i18n import tr  # noqa: E402
+from skyline_qt import Puff  # noqa: E402
 
-from PyQt6.QtCore import QObject, QRect, Qt, QThread, QTimer, pyqtSignal  # noqa: E402
-from PyQt6.QtGui import QColor, QIcon, QPainter  # noqa: E402
+from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal  # noqa: E402
+from PyQt6.QtGui import QIcon  # noqa: E402
 from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QLineEdit,  # noqa: E402
                              QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget)
 
 ASKED_FLAG = sk.CONFIG_DIR / "assistant-asked"
 
-HELP = ("I can change your sky (sunrise, day, dusk, night or automatic), the desktop layout "
-        "(classic, dock, minimal), the taskbar (black, white, glass, clear), Game Mode, real weather, "
-        "the accent color, and install or open apps. Try: \"make it night\" or \"install discord\".")
-NO_KEY = ("I didn't get that one. I understand requests like \"night sky\", \"dock layout\", "
+HELP = (tr("I can change your sky (sunrise, day, dusk, night or automatic), the desktop layout "
+        "(classic, dock, minimal, SkyLine Shell), the taskbar (black, white, glass, clear), Game Mode, real weather, "
+        "the accent color, and install or open apps. Try: \"make it night\" or \"install discord\"."))
+NO_KEY = (tr("I didn't get that one. I understand requests like \"night sky\", \"dock layout\", "
           "\"clear taskbar\", \"game mode on\" or \"install steam\". To chat about anything, press "
-          "\"Connect AI\" at the top and add a key (Claude, OpenAI, NVIDIA, Groq, Gemini and more).")
+          "\"Connect AI\" at the top and add a key (Claude, OpenAI, NVIDIA, Groq, Gemini and more)."))
 
 
 # ======================================================================= the offline brain
@@ -58,7 +59,7 @@ def local_brain(text):
     if _has(t, "help", "aiuto", "what can you do", "cosa sai fare", "commands", "comandi"):
         return HELP
     if len(t.split()) <= 3 and _has(t, "hi", "hello", "hey", "ciao", "salve", "yo"):
-        return "Hi! I'm Puff, your SkyLine cloud. " + HELP
+        return tr("Hi! I'm Puff, your SkyLine cloud.") + " " + HELP
 
     # Own wallpaper
     if _has(t, "my wallpaper", "my own wallpaper", "mio sfondo", "my background"):
@@ -122,6 +123,11 @@ def local_brain(text):
         if color:
             replies.append(sk.set_accent(color))
 
+    # Update SkyLine itself
+    if _has(t, "update skyline", "skyline update", "aggiorna skyline", "check for updates", "cerca aggiornamenti",
+            "updates", "aggiornamenti", "aggiornati", "update yourself"):
+        replies.append(sk.update_skyline())
+
     # Install apps
     if _has(t, "install", "installa", "download", "scarica", "get me", "metti"):
         ids = []
@@ -180,8 +186,10 @@ def run_tool(name, args):
             return sk.open_app(args.get("name", ""))
         if name == "keep_own_wallpaper":
             return sk.keep_own_wallpaper(bool(args.get("on")))
+        if name == "update_skyline":
+            return sk.update_skyline()
     except Exception as e:  # a failing action shouldn't crash the chat
-        return f"That didn't work: {e}"
+        return tr("That didn't work: {error}").format(error=e)
     return f"Unknown tool {name}."
 
 
@@ -200,10 +208,10 @@ class Brain(QObject):
             try:
                 reply = ai.chat(cfg, self.history, run_tool, local_actions=lambda: local_brain(text))
             except ai.AIError as e:
-                reply = local_brain(text) or (f"I couldn't reach my AI brain ({e}). I can still do simple "
-                                              "things like \"night sky\" or \"install discord\".")
+                reply = local_brain(text) or tr("I couldn't reach my AI brain ({error}). I can still do simple "
+                                                 "things like \"night sky\" or \"install discord\".").format(error=e)
             except Exception as e:  # unexpected answer format
-                reply = local_brain(text) or f"Something went wrong talking to the AI: {e}"
+                reply = local_brain(text) or tr("Something went wrong talking to the AI: {error}").format(error=e)
             self.history.append({"role": "assistant", "content": reply})
         else:
             reply = local_brain(text) or NO_KEY
@@ -211,53 +219,6 @@ class Brain(QObject):
 
 
 # ======================================================================= Puff the pixel cloud
-
-PUFF = [
-    "......oooo......",
-    "...oooowwwwo....",
-    "..owwwwwwwwwoo..",
-    ".owwwwwwwwwwwwo.",
-    "owwwwwwwwwwwwwwo",
-    "owwweewwwweewwwo",
-    "owwweewwwweewwwo",
-    "owbbwwwwwwwwbbwo",
-    "owwwwwmwwmwwwwwo",
-    ".owwwwwmmwwwwwo.",
-    "..oooooooooooo..",
-]
-PUFF_COLORS = {"o": "#23264A", "w": "#FFFFFF", "e": "#23264A", "m": "#23264A", "b": "#FFB3A6"}
-
-
-class Puff(QWidget):
-    def __init__(self, pixel=5):
-        super().__init__()
-        self.pixel = pixel
-        self.phase = 0.0
-        self.blink = 0
-        self.busy = False
-        self.setFixedSize(16 * pixel + 4, 11 * pixel + 12)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.tick)
-        self.timer.start(60)
-
-    def tick(self):
-        self.phase += 0.35 if self.busy else 0.12
-        self.blink = self.blink - 1 if self.blink > 0 else (3 if int(self.phase * 10) % 70 == 0 else 0)
-        self.update()
-
-    def paintEvent(self, _):
-        p = QPainter(self)
-        dy = round((math.sin(self.phase) + 1) * 3)
-        for y, row in enumerate(PUFF):
-            for x, ch in enumerate(row):
-                if ch == ".":
-                    continue
-                if ch == "e" and self.blink and y == 5:
-                    ch = "w"
-                p.fillRect(QRect(2 + x * self.pixel, 2 + dy + y * self.pixel, self.pixel, self.pixel),
-                           QColor(PUFF_COLORS[ch]))
-        p.end()
-
 
 # ======================================================================= the window
 
@@ -281,7 +242,7 @@ class AssistantWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("SkyLine Assistant")
+        self.setWindowTitle(tr("SkyLine Assistant"))
         self.setWindowIcon(QIcon.fromTheme("skyline", QIcon(sk.LOGO)))
         self.resize(420, 640)
 
@@ -291,7 +252,7 @@ class AssistantWindow(QWidget):
                              "#header QLabel { color: #23264A; background: transparent; }")
         self.puff = Puff()
         name = QLabel("<b style='font-size:16pt'>Puff</b>")
-        self.status = QLabel("Your SkyLine cloud. Ask me to change things!")
+        self.status = QLabel(tr("Your SkyLine cloud. Ask me to change things!"))
         self.status.setWordWrap(True)
         self.ai_button = QPushButton()
         self.ai_button.setStyleSheet("QPushButton { background: #FFFFFF; color: #23264A; border: none;"
@@ -317,17 +278,17 @@ class AssistantWindow(QWidget):
         self.scroll.setWidget(holder)
 
         chips = QHBoxLayout()
-        for label, request in [("Night sky", "make it night"), ("Dock layout", "dock layout"),
-                               ("Clear taskbar", "clear taskbar"), ("Game Mode", "game mode on")]:
-            b = QPushButton(label)
+        for label, request in [(tr("Night sky"), tr("make it night")), (tr("SkyLine Shell"), tr("skyline shell layout")),
+                               (tr("Clear taskbar"), tr("clear taskbar")), (tr("Game Mode"), tr("game mode on"))]:
+            b = QPushButton(tr(label))
             b.setStyleSheet("QPushButton { border: 1px solid palette(mid); border-radius: 12px; padding: 5px 9px; }")
-            b.clicked.connect(lambda _=False, r=request: self.send(r))
+            b.clicked.connect(lambda _=False, r=tr(request): self.send(r))
             chips.addWidget(b)
 
         self.input = QLineEdit()
-        self.input.setPlaceholderText("Ask Puff… (for example: make it night)")
+        self.input.setPlaceholderText(tr("Ask Puff… (for example: make it night)"))
         self.input.returnPressed.connect(lambda: self.send(self.input.text()))
-        send = QPushButton("Send")
+        send = QPushButton(tr("Send"))
         send.setDefault(True)
         send.clicked.connect(lambda: self.send(self.input.text()))
         row = QHBoxLayout()
@@ -350,8 +311,8 @@ class AssistantWindow(QWidget):
 
         smart = ai.ready(ai.load())
         self.refresh_ai_button()
-        self.add("Hi! I'm Puff. I can change your sky, layout and taskbar, turn on Game Mode, and install or "
-                 "open apps." + (" Ask me anything!" if smart else ""), mine=False)
+        self.add(tr("Hi! I'm Puff. I can change your sky, layout and taskbar, turn on Game Mode, and install or "
+                    "open apps.") + (" " + tr("Ask me anything!") if smart else ""), mine=False)
         if not smart and not ASKED_FLAG.exists():
             self.offer_ai()
 
@@ -360,18 +321,18 @@ class AssistantWindow(QWidget):
         if ai.ready(cfg):
             self.ai_button.setText("AI: " + ai.PROVIDERS[cfg["provider"]]["label"].split(" (")[0])
         else:
-            self.ai_button.setText("Connect AI")
+            self.ai_button.setText(tr("Connect AI"))
 
     def offer_ai(self):
         """First time: ask the user to connect an AI so they can really talk with Puff."""
         box = QFrame()
         box.setStyleSheet("QFrame { background: palette(alternate-base); border-radius: 14px; }"
                           "QLabel { background: transparent; }")
-        text = QLabel("Want to really talk with me? Connect an AI with your own API key: Claude, OpenAI, NVIDIA, "
-                      "Groq, Gemini, OpenRouter, or Ollama on this computer (no key needed).")
+        text = QLabel(tr("Want to really talk with me? Connect an AI with your own API key: Claude, OpenAI, NVIDIA, "
+                      "Groq, Gemini, OpenRouter, or Ollama on this computer (no key needed)."))
         text.setWordWrap(True)
-        yes = QPushButton("Connect an AI")
-        later = QPushButton("Not now")
+        yes = QPushButton(tr("Connect an AI"))
+        later = QPushButton(tr("Not now"))
         row = QHBoxLayout()
         row.addWidget(yes)
         row.addWidget(later)
@@ -388,7 +349,7 @@ class AssistantWindow(QWidget):
             if connect:
                 self.connect_ai()
             else:
-                self.add("No problem! You can connect one any time with the button at the top.", mine=False)
+                self.add(tr("No problem! You can connect one any time with the button at the top."), mine=False)
 
         yes.clicked.connect(lambda: answered(True))
         later.clicked.connect(lambda: answered(False))
@@ -397,8 +358,8 @@ class AssistantWindow(QWidget):
         if ai.setup_dialog(self):
             cfg = ai.load()
             self.brain.history.clear()
-            self.add(f"Connected to {ai.PROVIDERS[cfg['provider']]['label']} ({cfg['model']}). "
-                     "Now we can talk about anything!", mine=False)
+            self.add(tr("Connected to {service} ({model}). Now we can talk about anything!").format(
+                service=ai.PROVIDERS[cfg["provider"]]["label"], model=cfg["model"]), mine=False)
         self.refresh_ai_button()
 
     def add(self, text, mine):
@@ -421,12 +382,12 @@ class AssistantWindow(QWidget):
         self.input.clear()
         self.add(text, mine=True)
         self.puff.busy = True
-        self.status.setText("Thinking…")
+        self.status.setText(tr("Thinking…"))
         self.asked.emit(text)
 
     def on_answer(self, reply):
         self.puff.busy = False
-        self.status.setText("Your SkyLine cloud. Ask me to change things!")
+        self.status.setText(tr("Your SkyLine cloud. Ask me to change things!"))
         self.add(reply, mine=False)
 
     def closeEvent(self, event):

@@ -12,7 +12,9 @@
         "Id": "org.skyline.cloudmenu",
         "License": "GPL-2.0-or-later",
         "Name": "Cloud Menu",
-        "Version": "1.2"
+        "Version": "1.3",
+        "Name[it]": "Menu Nuvola",
+        "Description[it]": "Il menu di SkyLine: app, ricerca, il cielo e Puff"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "X-Plasma-Provides": [

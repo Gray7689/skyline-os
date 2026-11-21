@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=SkyLine Setup
+Name[it]=Configurazione di SkyLine
+GenericName=First-start setup
+GenericName[it]=Configurazione iniziale
+Comment=Language, internet, sky, desktop, apps and Puff
+Comment[it]=Lingua, internet, cielo, desktop, app e Puff
+Exec=skyline-setup
+Icon=skyline
+Terminal=false
+Categories=Settings;
+Keywords=welcome;setup;first;language;wifi;benvenuto;configurazione;lingua;

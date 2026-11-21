@@ -1,0 +1,464 @@
+#!/usr/bin/env python3
+"""SkyLine Setup: a friendly first start. Language, internet, sky, desktop, apps and Puff.
+
+Usage: skyline-setup [--page N]
+Opens by itself the first time someone logs in. Run it again any time from
+SkyLine Settings > About, or by typing skyline-setup.
+"""
+import os
+import sys
+
+sys.path.insert(0, os.environ.get("SKYLINE_LIB", "/usr/lib/skyline"))
+import skyline_ai as ai  # noqa: E402
+import skyline_common as sk  # noqa: E402
+import skyline_i18n as i18n  # noqa: E402
+from skyline_i18n import tr  # noqa: E402
+from skyline_qt import Puff, auto_thumb, card, heading, in_background, note, section, thumb  # noqa: E402
+
+from PyQt6.QtCore import QSize, Qt, QTimer  # noqa: E402
+from PyQt6.QtGui import QIcon, QPixmap  # noqa: E402
+from PyQt6.QtWidgets import (QApplication, QButtonGroup, QCheckBox, QFrame, QGridLayout,  # noqa: E402
+                             QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+                             QPushButton, QRadioButton, QStackedWidget, QVBoxLayout, QWidget)
+
+DONE_FLAG = sk.CONFIG_DIR / "setup-done"
+DEFAULT_APPS = ("discord", "steam")
+
+
+def body(*items):
+    w = QWidget()
+    v = QVBoxLayout(w)
+    v.setContentsMargins(0, 0, 0, 0)
+    v.setSpacing(12)
+    for item in items:
+        if isinstance(item, QWidget):
+            v.addWidget(item)
+        else:
+            v.addLayout(item)
+    v.addStretch(1)
+    return w
+
+
+def big_choice(text, sub=""):
+    b = QPushButton(text + (f"\n{sub}" if sub else ""))
+    b.setCheckable(True)
+    b.setMinimumSize(QSize(200, 74))
+    b.setStyleSheet("QPushButton { border: 2px solid palette(mid); border-radius: 16px; font-size: 15pt; padding: 8px; }"
+                    "QPushButton:checked { border-color: palette(highlight); background: palette(alternate-base); }"
+                    "QPushButton:hover { border-color: palette(highlight); }")
+    return b
+
+
+# ------------------------------------------------------------------ pages
+
+class LanguagePage:
+    title = tr("Hi! I'm Puff.")
+
+    def __init__(self, wizard):
+        self.wizard = wizard
+        self.group = QButtonGroup()
+        row = QHBoxLayout()
+        current = i18n.language()
+        for code, name in i18n.LANGUAGES.items():
+            b = big_choice(name, {"en": "Welcome", "it": "Benvenuto"}[code])
+            b.setChecked(code == current or (current not in i18n.LANGUAGES and code == "en"))
+            b.clicked.connect(lambda _=False, c=code: self.pick(c))
+            self.group.addButton(b)
+            row.addWidget(b)
+        row.addStretch(1)
+        self.widget = body(note(tr("Let's get SkyLine ready together. It takes about a minute, and you can "
+                                   "change everything later in SkyLine Settings.")),
+                           section(tr("Pick your language")), row)
+
+    def pick(self, code):
+        if code != i18n.language():
+            i18n.set_language(code)
+            self.wizard.language_changed = True
+            # Start again in the new language, on the next page.
+            self.wizard.restart(1)
+
+    def leave(self):
+        return True
+
+
+class InternetPage:
+    title = tr("Let's get you online")
+
+    def __init__(self, wizard):
+        self.wizard = wizard
+        self.status = note(tr("Checking your connection…"))
+        self.list = QListWidget()
+        self.list.setMinimumHeight(170)
+        self.password = QLineEdit()
+        self.password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password.setPlaceholderText(tr("Wi-Fi password"))
+        self.password.returnPressed.connect(self.connect)
+        join = QPushButton(tr("Connect"))
+        join.clicked.connect(self.connect)
+        rescan = QPushButton(tr("Look again"))
+        rescan.clicked.connect(self.scan)
+        more = QPushButton(tr("Network settings…"))
+        more.clicked.connect(lambda: sk.start("systemsettings", "kcm_networkmanagement"))
+        row = QHBoxLayout()
+        row.addWidget(self.password, 1)
+        row.addWidget(join)
+        tools = QHBoxLayout()
+        tools.addWidget(rescan)
+        tools.addWidget(more)
+        tools.addStretch(1)
+        self.wifi = body(section(tr("Wi-Fi networks")), self.list, row, tools)
+        self.wifi.hide()
+        self.widget = body(self.status, self.wifi,
+                           note(tr("Using a cable? Then you're probably online already. No internet right now? "
+                                   "Press Next: SkyLine works offline too.")))
+        QTimer.singleShot(300, self.check)
+
+    def check(self):
+        in_background(self.wizard, sk.run, "nmcli", "-t", "-f", "CONNECTIVITY", "general", then=self.checked)
+
+    def checked(self, result):
+        online = not isinstance(result, Exception) and result[0] == 0 and result[1].strip() == "full"
+        if online:
+            self.status.setText("✓ " + tr("You're online. Nice!"))
+            self.wifi.hide()
+        else:
+            self.status.setText(tr("You're not online yet. Pick your Wi-Fi below."))
+            self.wifi.show()
+            self.scan()
+
+    def scan(self):
+        self.list.clear()
+        self.list.addItem(tr("Looking for Wi-Fi…"))
+        in_background(self.wizard, sk.run, "nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list",
+                      "--rescan", "yes", then=self.scanned)
+
+    def scanned(self, result):
+        self.list.clear()
+        if isinstance(result, Exception) or result[0] != 0:
+            self.list.addItem(tr("No Wi-Fi found. Try Network settings."))
+            return
+        seen = set()
+        for line in result[1].splitlines():
+            parts = line.replace("\\:", "\x00").split(":")
+            if len(parts) < 3:
+                continue
+            ssid, signal, security = (p.replace("\x00", ":") for p in parts[:3])
+            if not ssid or ssid in seen:
+                continue
+            seen.add(ssid)
+            item = QListWidgetItem(QIcon.fromTheme("network-wireless"), f"{ssid}   {signal}%" + ("   🔒" if security else ""))
+            item.setData(Qt.ItemDataRole.UserRole, ssid)
+            self.list.addItem(item)
+        if not seen:
+            self.list.addItem(tr("No Wi-Fi found. Try Network settings."))
+
+    def connect(self):
+        item = self.list.currentItem()
+        ssid = item.data(Qt.ItemDataRole.UserRole) if item else None
+        if not ssid:
+            self.status.setText(tr("Pick a Wi-Fi network first."))
+            return
+        self.status.setText(tr("Connecting to {name}…").format(name=ssid))
+        cmd = ["nmcli", "device", "wifi", "connect", ssid]
+        if self.password.text():
+            cmd += ["password", self.password.text()]
+        in_background(self.wizard, sk.run, *cmd, then=self.connected)
+
+    def connected(self, result):
+        self.password.clear()
+        if isinstance(result, Exception) or result[0] != 0:
+            self.status.setText(tr("That didn't work. Check the password and try again."))
+        else:
+            self.check()
+
+    def leave(self):
+        return True
+
+
+class SkyPage:
+    title = tr("Pick your sky")
+
+    def __init__(self, wizard):
+        self.wizard = wizard
+        self.mode = sk.sky_settings()["mode"]
+        grid = QGridLayout()
+        grid.setSpacing(10)
+        self.group = QButtonGroup()
+        for i, (mode, label) in enumerate(sk.SKIES.items()):
+            pm = auto_thumb(170, 96) if mode == "auto" else thumb(sk.SKY_WALLPAPER[mode], 170, 96)
+            b = card(label, pm, QSize(170, 96))
+            b.setChecked(mode == self.mode)
+            b.clicked.connect(lambda _=False, m=mode: setattr(self, "mode", m))
+            self.group.addButton(b)
+            grid.addWidget(b, i // 3, i % 3)
+        self.city = QLineEdit()
+        self.city.setPlaceholderText(tr("Your city, for example Rome"))
+        self.weather = QCheckBox(tr("Show the real weather in the sky (rain, snow, clouds)"))
+        self.weather.setChecked(True)
+        self.widget = body(note(tr("Your wallpaper and colors. \"Follow the time of day\" goes from sunrise to night "
+                                   "by itself.")), grid, section(tr("Weather (optional)")), self.city, self.weather)
+
+    def leave(self):
+        sk.set_sky(self.mode)
+        city = self.city.text().strip()
+        if city:
+            in_background(self.wizard, sk.set_weather, self.weather.isChecked(), city, then=lambda _r: None)
+        return True
+
+
+class DesktopPage:
+    title = tr("Your desktop")
+
+    def __init__(self, wizard):
+        self.wizard = wizard
+        self.layout = "shell"
+        grid = QGridLayout()
+        grid.setSpacing(10)
+        self.group = QButtonGroup()
+        order = ["shell", "classic", "dock", "minimal"]
+        for i, name in enumerate(order):
+            label = sk.LAYOUTS[name].split(":")[0]
+            if name == "shell":
+                label += "  ★"
+            pm = QPixmap(str(sk.PREVIEWS / f"layout-{name}.png"))
+            if pm.isNull():
+                pm = thumb("SkyLine-Peach", 170, 96)
+            b = card(label, pm.scaled(170, 96, Qt.AspectRatioMode.KeepAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation), QSize(170, 96))
+            b.setChecked(name == self.layout)
+            b.clicked.connect(lambda _=False, n=name: setattr(self, "layout", n))
+            self.group.addButton(b)
+            grid.addWidget(b, i // 2, i % 2)
+        grid.setColumnStretch(2, 1)
+        self.dots = QRadioButton(tr("SkyLine: three round buttons, colors follow the sky"))
+        self.breeze = QRadioButton(tr("Breeze: KDE's classic look"))
+        self.dots.setChecked(True)
+        self.left = QCheckBox(tr("Window buttons on the left"))
+        self.left.setChecked(True)
+        self.widget = body(note(tr("★ SkyLine Shell is SkyLine's own desktop: a top bar with the sky, and a dock with "
+                                   "the Cloud Menu, your apps and Puff.")), grid,
+                           section(tr("Window style")), self.dots, self.breeze, self.left)
+
+    def leave(self):
+        sk.start("skyline-windows", "skyline" if self.dots.isChecked() else "breeze")
+        QTimer.singleShot(800, lambda: sk.start("skyline-windows", "left" if self.left.isChecked() else "right"))
+        if self.layout != sk.current_layout():
+            sk.set_layout(self.layout)
+        return True
+
+
+class AppsPage:
+    title = tr("Your apps")
+
+    def __init__(self, wizard):
+        self.wizard = wizard
+        self.boxes = {}
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(24)
+        items = list(sk.APPS.items())
+        if sk.nvidia_status() == "missing":
+            items.insert(0, ("nvidia", (tr("NVIDIA driver"), tr("For games and external monitors"))))
+        for i, (app_id, (name, desc)) in enumerate(items):
+            box = QCheckBox(f"{name}  ·  {desc}")
+            box.setChecked(app_id in DEFAULT_APPS or app_id == "nvidia")
+            self.boxes[app_id] = box
+            grid.addWidget(box, i // 2, i % 2)
+        self.widget = body(note(tr("Tick what you use. SkyLine installs them in a window while you finish here "
+                                   "(it may ask for your password).")), grid)
+        QTimer.singleShot(200, lambda: in_background(self.wizard, sk.installed_apps, then=self.mark))
+
+    def mark(self, installed):
+        if isinstance(installed, Exception):
+            return
+        for app_id in installed:
+            box = self.boxes.get(app_id)
+            if box:
+                box.setChecked(False)
+                box.setEnabled(False)
+                box.setText(box.text() + "  ✓")
+
+    def leave(self):
+        wanted = [a for a, b in self.boxes.items() if b.isChecked() and b.isEnabled()]
+        if wanted:
+            self.wizard.toast(sk.install_apps(wanted))
+        return True
+
+
+class PuffPage:
+    title = tr("Talk with Puff")
+
+    def __init__(self, wizard):
+        self.wizard = wizard
+        self.status = note("")
+        connect = QPushButton(tr("Connect an AI…"))
+        connect.clicked.connect(self.connect)
+        row = QHBoxLayout()
+        row.addWidget(connect)
+        row.addStretch(1)
+        self.widget = body(
+            note(tr("I already understand simple things like \"night sky\" or \"install discord\". Connect an AI with "
+                    "your own key and I can chat about anything: Claude, OpenAI, NVIDIA, Groq, Gemini, OpenRouter, "
+                    "or Ollama on this computer (free, no key).")),
+            row, self.status,
+            note(tr("No key? No problem: press Next. You can connect one later in SkyLine Settings > Assistant.")))
+        self.refresh()
+
+    def refresh(self):
+        cfg = ai.load()
+        if ai.ready(cfg):
+            self.status.setText("✓ " + tr("Connected: {service}, model {model}.").format(
+                service=ai.PROVIDERS[cfg["provider"]]["label"], model=cfg["model"]))
+
+    def connect(self):
+        ai.setup_dialog(self.wizard)
+        self.refresh()
+
+    def leave(self):
+        sk.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        (sk.CONFIG_DIR / "assistant-asked").touch()
+        return True
+
+
+class DonePage:
+    title = tr("You're all set!")
+
+    def __init__(self, wizard):
+        self.wizard = wizard
+        tips = note("• " + tr("Press the Windows key to open the Cloud Menu: apps, search and the sky.") + "\n"
+                    "• " + tr("Click Puff in the dock to ask for anything.") + "\n"
+                    "• " + tr("Click the sky in the top bar for quick switches.") + "\n"
+                    "• " + tr("Change anything later in SkyLine Settings."))
+        tips.setStyleSheet("font-size: 12pt;")
+        self.relogin = note(tr("Log out and back in once to see all of KDE in your language."))
+        self.relogin.setVisible(wizard.language_changed)
+        logout = QPushButton(tr("Log out now"))
+        logout.setVisible(wizard.language_changed)
+        logout.clicked.connect(self.logout)
+        self.widget = body(tips, self.relogin, logout)
+
+    def logout(self):
+        self.wizard.finish()
+        sk.start("dbus-send", "--session", "--type=method_call", "--dest=org.kde.LogoutPrompt",
+                 "/LogoutPrompt", "org.kde.LogoutPrompt.promptLogout")
+
+    def leave(self):
+        return True
+
+
+PAGES = [LanguagePage, InternetPage, SkyPage, DesktopPage, AppsPage, PuffPage, DonePage]
+
+
+# ------------------------------------------------------------------ the window
+
+class SetupWindow(QWidget):
+    def __init__(self, start=0, language_changed=False):
+        super().__init__()
+        self.language_changed = language_changed
+        self.setWindowTitle(tr("Welcome to SkyLine"))
+        self.setWindowIcon(QIcon.fromTheme("skyline", QIcon(sk.LOGO)))
+        self.resize(900, 640)
+
+        header = QFrame()
+        header.setObjectName("header")
+        header.setStyleSheet("#header { background: #FFD8CC; border-radius: 18px; }"
+                             "#header QLabel { color: #23264A; background: transparent; }")
+        self.puff = Puff(pixel=6)
+        self.title = heading("")
+        self.step = QLabel("")
+        text = QVBoxLayout()
+        text.addWidget(self.title)
+        text.addWidget(self.step)
+        h = QHBoxLayout(header)
+        h.setContentsMargins(18, 12, 18, 12)
+        h.addWidget(self.puff)
+        h.addLayout(text, 1)
+
+        self.stack = QStackedWidget()
+        self.pages = []
+        for cls in PAGES:
+            pg = cls(self)
+            self.pages.append(pg)
+            self.stack.addWidget(pg.widget)
+
+        self.message = QLabel("")
+        self.message.setWordWrap(True)
+        self.message.setStyleSheet("QLabel { background: palette(highlight); color: palette(highlighted-text);"
+                                   " border-radius: 10px; padding: 8px 12px; }")
+        self.message.hide()
+
+        self.back = QPushButton(tr("Back"))
+        self.back.clicked.connect(lambda: self.go(self.stack.currentIndex() - 1))
+        self.skip = QPushButton(tr("Skip setup"))
+        self.skip.clicked.connect(self.finish)
+        self.next = QPushButton(tr("Next"))
+        self.next.setDefault(True)
+        self.next.setMinimumWidth(130)
+        self.next.clicked.connect(self.forward)
+        buttons = QHBoxLayout()
+        buttons.addWidget(self.skip)
+        buttons.addStretch(1)
+        buttons.addWidget(self.back)
+        buttons.addWidget(self.next)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(18, 18, 18, 18)
+        root.setSpacing(16)
+        root.addWidget(header)
+        root.addWidget(self.stack, 1)
+        root.addWidget(self.message)
+        root.addLayout(buttons)
+        self.go(start)
+
+    def go(self, i):
+        i = max(0, min(i, len(self.pages) - 1))
+        self.stack.setCurrentIndex(i)
+        self.title.setText(tr(self.pages[i].title))
+        self.step.setText(tr("Step {n} of {total}").format(n=i + 1, total=len(self.pages)))
+        self.back.setEnabled(i > 0)
+        last = i == len(self.pages) - 1
+        self.next.setText(tr("Start using SkyLine") if last else tr("Next"))
+        self.skip.setVisible(not last)
+
+    def forward(self):
+        i = self.stack.currentIndex()
+        if not self.pages[i].leave():
+            return
+        if i == len(self.pages) - 1:
+            self.finish()
+        else:
+            self.go(i + 1)
+
+    def toast(self, text):
+        self.message.setText(str(text))
+        self.message.show()
+        QTimer.singleShot(6000, self.message.hide)
+
+    def finish(self):
+        sk.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        DONE_FLAG.touch()
+        self.close()
+
+    def restart(self, page):
+        """Reopen in the new language (Qt can't re-translate a window that's already built)."""
+        DONE_FLAG.unlink(missing_ok=True)
+        args = [sys.executable, os.path.abspath(sys.argv[0]), "--page", str(page), "--language-changed"]
+        self.hide()
+        os.execv(sys.executable, args)
+
+
+def main():
+    args = sys.argv[1:]
+    if args and args[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0
+    start = int(args[1]) if len(args) > 1 and args[0] == "--page" and args[1].isdigit() else 0
+    app = QApplication(sys.argv)
+    app.setApplicationName("skyline-setup")
+    app.setDesktopFileName("skyline-setup")
+    w = SetupWindow(start, "--language-changed" in args)
+    w.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

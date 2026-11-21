@@ -6,14 +6,16 @@ peach at sunrise, blue at noon, lavender at dusk, starry at night.
 
 This folder is the whole recipe. One command turns it into an ISO you can put on a USB stick.
 
-## What's in SkyLine 1.2
+## What's in SkyLine 1.3
 
 | | |
 |---|---|
 | **Desktop** | KDE Plasma 6. Drag, resize and restyle anything: panels, widgets, window buttons, icons, fonts, animations. |
 | **Dynamic sky** | Wallpaper, colors and lock screen follow the time of day, and the **real weather** (rain, snow, clouds) if you set your city. |
 | **Taskbar styles** | Follows the sky, **black**, **white**, **glass** (see-through) or **clear** (invisible). |
-| **SkyLine Shell** | SkyLine's own desktop, piece by piece. Now: the **Cloud Menu** (start menu with Puff, search, pinned apps, sky and power buttons) and **Puff in the taskbar**. Next: our own dock, top bar, window style, lock screen. |
+| **SkyLine Shell** | SkyLine's own desktop: the **Cloud Menu** (start menu with Puff, search, pinned apps, sky and power buttons), the **SkyLine Dock**, **Puff in the dock**, the **sky pill** in the top bar (temperature and quick switches), **round-button window style** that follows the sky, and SkyLine's **lock and login screens**. |
+| **Italiano** | All of SkyLine speaks Italian (Settings, Puff, widgets, dialogs). It follows KDE's language. Translations: `package/skyline-desktop/usr/share/skyline/l10n/it.json`. |
+| **SkyLine Setup** | First-start setup for new users: language, Wi-Fi, sky, layout and windows, apps, Puff's AI. |
 | **Layouts** | One click: **Classic** (bar at the bottom), **Dock** (top bar + app dock), **Minimal** (small floating bar), **SkyLine Shell** (top bar + dock with the Cloud Menu and Puff). |
 | **Puff, the Assistant** | A pixel cloud you chat with. Changes your sky, layout, taskbar, Game Mode and apps. Works offline for simple requests (English and Italian); connect **Claude, OpenAI, NVIDIA, Groq, Gemini, OpenRouter, Ollama** or any OpenAI-compatible server to talk about anything. |
 | **SkyLine Settings** | One app for sky, weather, layout, taskbar, accent color, icons, sounds, apps, gaming, Puff and updates. |
@@ -30,8 +32,8 @@ This folder is the whole recipe. One command turns it into an ISO you can put on
 (On 1.1 or newer, just run `skyline-update install`.)
 
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.2.0/skyline-desktop_1.2.0_all.deb
-sudo apt install ./skyline-desktop_1.2.0_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.3.0/skyline-desktop_1.3.0_all.deb
+sudo apt install ./skyline-desktop_1.3.0_all.deb
 ```
 Log out and back in. From now on SkyLine tells you when a new version is out.
 
@@ -106,7 +108,9 @@ After that, a menu at start-up lets you pick SkyLine or Windows.
 | Wallpapers, weather skies, icons, sounds, boot and installer art | `tools/make-assets.py`, then run it |
 | Pre-installed programs | `config/package-lists/skyline.list.chroot` |
 | Desktop layouts | `package/skyline-desktop/usr/lib/skyline/layouts/*.js` |
-| SkyLine Shell widgets (Cloud Menu, Puff button) | `package/skyline-desktop/usr/share/plasma/plasmoids/org.skyline.*/` (QML) |
+| SkyLine Shell widgets (Cloud Menu, Dock, sky pill, Puff) | `package/skyline-desktop/usr/share/plasma/plasmoids/org.skyline.*/` (QML) |
+| Window style (title bars) | `tools/make-windows.py` writes `usr/share/aurorae/themes/SkyLine-*` |
+| Translations | `usr/share/skyline/l10n/<lang>.json`; check with `python3 tools/l10n.py check`, widget files with `python3 tools/l10n.py mo` |
 | Puff's offline commands | `local_brain` in `package/skyline-desktop/usr/bin/skyline-assistant` |
 | AI services Puff can use | `PROVIDERS` in `package/skyline-desktop/usr/lib/skyline/skyline_ai.py` |
 | When each sky starts | `sky_for_now` in `package/skyline-desktop/usr/bin/skyline-sky` |

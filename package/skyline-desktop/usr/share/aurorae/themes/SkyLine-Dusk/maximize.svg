@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="20" version="1.1">
+  <g id="active-center" transform="translate(0,0)"><rect width="20" height="20" fill="none" stroke="none"/><circle cx="10.0" cy="10.0" r="6.5" fill="#4CC38A"/></g>
+  <g id="hover-center" transform="translate(20,0)"><rect width="20" height="20" fill="none" stroke="none"/><circle cx="10.0" cy="10.0" r="6.5" fill="#4CC38A"/><path d="M6.5,10.0 L13.5,10.0 M10.0,6.5 L10.0,13.5" stroke="#14172B" stroke-width="1.6" stroke-linecap="round" fill="none"/></g>
+  <g id="pressed-center" transform="translate(40,0)"><rect width="20" height="20" fill="none" stroke="none"/><circle cx="10.0" cy="10.0" r="6.5" fill="#3E9F71"/><path d="M6.5,10.0 L13.5,10.0 M10.0,6.5 L10.0,13.5" stroke="#14172B" stroke-width="1.6" stroke-linecap="round" fill="none"/></g>
+  <g id="inactive-center" transform="translate(60,0)"><rect width="20" height="20" fill="none" stroke="none"/><circle cx="10.0" cy="10.0" r="6.5" fill="#C9D3E0"/></g>
+  <g id="hover-inactive-center" transform="translate(80,0)"><rect width="20" height="20" fill="none" stroke="none"/><circle cx="10.0" cy="10.0" r="6.5" fill="#4CC38A"/><path d="M6.5,10.0 L13.5,10.0 M10.0,6.5 L10.0,13.5" stroke="#14172B" stroke-width="1.6" stroke-linecap="round" fill="none"/></g>
+  <g id="pressed-inactive-center" transform="translate(100,0)"><rect width="20" height="20" fill="none" stroke="none"/><circle cx="10.0" cy="10.0" r="6.5" fill="#3E9F71"/><path d="M6.5,10.0 L13.5,10.0 M10.0,6.5 L10.0,13.5" stroke="#14172B" stroke-width="1.6" stroke-linecap="round" fill="none"/></g>
+  <g id="deactivated-center" transform="translate(120,0)"><rect width="20" height="20" fill="none" stroke="none"/><circle cx="10.0" cy="10.0" r="6.5" fill="#C9D3E0"/></g>
+  <g id="deactivated-inactive-center" transform="translate(140,0)"><rect width="20" height="20" fill="none" stroke="none"/><circle cx="10.0" cy="10.0" r="6.5" fill="#C9D3E0"/></g>
+</svg>

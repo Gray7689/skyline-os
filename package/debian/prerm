@@ -2,5 +2,10 @@
 set -e
 if [ "$1" = remove ]; then
 	systemctl --global disable skyline-sky.timer skyline-update.timer >/dev/null 2>&1 || true
+	# Files made by sync-breeze-copies (not owned by the package): back to KDE's own screens.
+	rm -rf /usr/share/plasma/look-and-feel/org.skyline.desktop/contents/lockscreen \
+		/usr/share/plasma/look-and-feel/org.skyline.desktop/contents/components \
+		/usr/share/sddm/themes/skyline
+	rm -f /etc/sddm.conf.d/zzz-skyline-theme.conf
 fi
 exit 0

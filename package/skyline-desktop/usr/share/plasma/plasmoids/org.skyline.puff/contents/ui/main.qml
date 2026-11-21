@@ -10,7 +10,7 @@ PlasmoidItem {
 
     preferredRepresentation: compactRepresentation
     toolTipMainText: "Puff"
-    toolTipSubText: "Your SkyLine Assistant. Click to chat."
+    toolTipSubText: i18n("Your SkyLine Assistant. Click to chat.")
 
     P5Support.DataSource {
         id: shell

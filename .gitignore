@@ -21,3 +21,5 @@ chroot.*
 binary.*
 /dist/
 /config/packages.chroot/
+__pycache__/
+*.pyc

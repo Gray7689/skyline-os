@@ -1,8 +1,10 @@
 [Desktop Entry]
 Type=Application
 Name=SkyLine Assistant
+Name[it]=Assistente SkyLine
 GenericName=Puff
 Comment=Ask Puff to change your sky, layout, taskbar and apps
+Comment[it]=Chiedi a Puff di cambiare cielo, disposizione, barra e app
 Icon=skyline
 Exec=skyline-assistant
 Terminal=false

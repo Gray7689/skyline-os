@@ -13,6 +13,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from skyline_i18n import tr
+
 # SKYLINE_DATA_ROOT lets developers run the apps from the repository without installing.
 DATA_ROOT = Path(os.environ.get("SKYLINE_DATA_ROOT", "/"))
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "skyline"
@@ -21,18 +23,18 @@ WALLPAPERS = DATA_ROOT / "usr/share/wallpapers"
 PREVIEWS = DATA_ROOT / "usr/share/skyline/previews"
 LOGO = str(DATA_ROOT / "usr/share/skyline/logo.png")
 
-VERSION_FALLBACK = "1.1.0"
+VERSION_FALLBACK = "1.3.0"
 
 APPS = {  # id: (name, short description)
-    "claude": ("Claude", "AI assistant by Anthropic"),
-    "discord": ("Discord", "Chat with friends and servers"),
-    "steam": ("Steam", "Your game library"),
-    "sober": ("Roblox player", "Sober, unofficial"),
-    "vinegar": ("Roblox Studio", "Vinegar, unofficial"),
+    "claude": ("Claude", tr("AI assistant by Anthropic")),
+    "discord": ("Discord", tr("Chat with friends and servers")),
+    "steam": ("Steam", tr("Your game library")),
+    "sober": (tr("Roblox player"), tr("Sober, unofficial")),
+    "vinegar": ("Roblox Studio", tr("Vinegar, unofficial")),
     "prism": ("Minecraft", "Prism Launcher"),
-    "spotify": ("Spotify", "Music"),
-    "vscode": ("Visual Studio Code", "Code editor"),
-    "obs": ("OBS Studio", "Record and stream"),
+    "spotify": ("Spotify", tr("Music")),
+    "vscode": ("Visual Studio Code", tr("Code editor")),
+    "obs": ("OBS Studio", tr("Record and stream")),
 }
 
 FLATPAK_IDS = {
@@ -61,27 +63,27 @@ def installed_apps():
 
 
 SKIES = {
-    "auto": "Follow the time of day",
-    "sunrise": "Sunrise",
-    "day": "Day",
-    "dusk": "Dusk",
-    "night": "Night",
+    "auto": tr("Follow the time of day"),
+    "sunrise": tr("Sunrise"),
+    "day": tr("Day"),
+    "dusk": tr("Dusk"),
+    "night": tr("Night"),
 }
 SKY_WALLPAPER = {"sunrise": "SkyLine-Peach", "day": "SkyLine-Sky", "dusk": "SkyLine-Dusk", "night": "SkyLine-Night"}
 
 LAYOUTS = {
-    "classic": "Classic: one bar at the bottom",
-    "dock": "Dock: top bar and an app dock",
-    "minimal": "Minimal: one small floating bar",
-    "shell": "SkyLine Shell: top bar and a dock with Puff",
+    "classic": tr("Classic: one bar at the bottom"),
+    "dock": tr("Dock: top bar and an app dock"),
+    "minimal": tr("Minimal: one small floating bar"),
+    "shell": tr("SkyLine Shell: top bar and a dock with Puff"),
 }
 
 TASKBARS = {
-    "auto": "Follows the sky",
-    "black": "Black",
-    "white": "White",
-    "glass": "Glass (see-through)",
-    "clear": "Clear (invisible)",
+    "auto": tr("Follows the sky"),
+    "black": tr("Black"),
+    "white": tr("White"),
+    "glass": tr("Glass (see-through)"),
+    "clear": tr("Clear (invisible)"),
 }
 
 ACCENTS = {
@@ -93,6 +95,8 @@ ACCENTS = {
     "sun": "#E6A21B",
     "pink": "#D9488F",
 }
+ACCENT_NAMES = {"none": tr("Sky"), "coral": tr("Coral"), "sky": tr("Blue"), "lavender": tr("Lavender"), "mint": tr("Mint"),
+                "sun": tr("Sun yellow"), "pink": tr("Pink")}
 
 STEAM_NATIVE_OPTION = "skyline-play %command%"
 STEAM_FLATPAK_OPTION = ("__NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only "
@@ -218,6 +222,9 @@ SHORTCUTS = {
     "browser": ["x-www-browser"],
     "system settings": ["systemsettings"],
 }
+SHORTCUTS_IT = {"impostazioni": "settings", "negozio": "store", "file": "files", "cartelle": "files",
+                "gestore file": "files", "browser": "browser", "impostazioni di sistema": "system settings",
+                "terminale": "terminal"}
 
 
 def _desktop_entries():
@@ -244,8 +251,9 @@ def _parse_desktop(path):
 def open_app(query):
     """Open an app by a friendly name ("files", "discord", "steam"...). Returns a message."""
     q = query.strip().lower()
+    q = SHORTCUTS_IT.get(q, q)
     if q in SHORTCUTS:
-        return f"Opening {query}." if start(*SHORTCUTS[q]) else f"I couldn't open {query}."
+        return (tr("Opening {app}.") if start(*SHORTCUTS[q]) else tr("I couldn't open {app}.")).format(app=query)
     best = None
     for path in _desktop_entries():
         e = _parse_desktop(path)
@@ -258,43 +266,48 @@ def open_app(query):
         if best is None and (q in name or q in e.get("Keywords", "").lower()):
             best = e
     if not best:
-        return f"I couldn't find an app called {query}."
+        return tr("I couldn't find an app called {app}.").format(app=query)
     cmd = [part for part in shlex.split(best["Exec"]) if not re.fullmatch(r"%[a-zA-Z]", part)]
-    return f"Opening {best.get('Name', query)}." if start(*cmd) else f"I couldn't open {query}."
+    if start(*cmd):
+        return tr("Opening {app}.").format(app=best.get("Name", query))
+    return tr("I couldn't open {app}.").format(app=query)
 
 
 # ---------------------------------------------------------------- actions (shared by Settings and the Assistant)
 
 def set_sky(mode):
     if mode not in SKIES:
-        return f"I don't know the sky '{mode}'."
+        return tr("I don't know the sky '{name}'.").format(name=mode)
     start("skyline-sky", mode)
-    return "Your sky now follows the time of day." if mode == "auto" else f"Switched to the {mode} sky."
+    if mode == "auto":
+        return tr("Your sky now follows the time of day.")
+    return tr("Sky set to {name}.").format(name=SKIES[mode].lower())
 
 
 def keep_own_wallpaper(on):
     start("skyline-sky", "wallpaper", "mine" if on else "auto")
-    return ("Got it: I'll never change your wallpaper, only the colors." if on
-            else "SkyLine may change the wallpaper again when you pick a sky.")
+    return (tr("Got it: I'll never change your wallpaper, only the colors.") if on
+            else tr("SkyLine may change the wallpaper again when you pick a sky."))
 
 
 def set_layout(name):
     if name not in LAYOUTS:
-        return f"I don't know the layout '{name}'."
+        return tr("I don't know the layout '{name}'.").format(name=name)
     start("skyline-layout", name)
-    return f"Switching to the {name} layout."
+    return tr("Switching to the {name} layout.").format(name=LAYOUTS[name].split(":")[0])
 
 
 def set_taskbar(style):
     if style not in TASKBARS:
-        return f"I don't know the taskbar style '{style}'."
+        return tr("I don't know the taskbar style '{name}'.").format(name=style)
     start("skyline-taskbar", style)
-    return f"Taskbar set to {TASKBARS[style].lower()}. The desktop blinks for a second while it changes."
+    return tr("Taskbar set to: {name}. The desktop blinks for a second while it changes.").format(
+        name=TASKBARS[style].lower())
 
 
 def set_gamemode(on):
     start("skyline-gamemode", "on" if on else "off")
-    return "Game Mode is on: maximum performance, notifications muted." if on else "Game Mode is off."
+    return tr("Game Mode is on: maximum performance, notifications muted.") if on else tr("Game Mode is off.")
 
 
 def set_weather(on, place=None):
@@ -303,31 +316,39 @@ def set_weather(on, place=None):
         try:
             found = geocode(place)
         except OSError:
-            return "I couldn't look up that place. Check your internet connection."
+            return tr("I couldn't look up that place. Check your internet connection.")
         if not found:
-            return f"I couldn't find {place}."
+            return tr("I couldn't find {place}.").format(place=place)
         lat, lon, label = found
         run("skyline-sky", "place", f"{lat:.4f}", f"{lon:.4f}", label, timeout=60)
-        msg = f"Weather place set to {label}. "
+        msg = tr("Weather place set to {place}.").format(place=label) + " "
     start("skyline-sky", "weather", "on" if on else "off")
-    return msg + ("Your sky now shows the real weather." if on else "Weather effects are off.")
+    return msg + (tr("Your sky now shows the real weather.") if on else tr("Weather effects are off."))
 
 
 def set_accent(name_or_hex):
     value = ACCENTS.get(name_or_hex, name_or_hex)
     if value is None or value == "none":
         start("skyline-sky", "accent", "none")
-        return "Accent color now matches the sky."
+        return tr("Accent color now matches the sky.")
     if not re.fullmatch(r"#[0-9A-Fa-f]{6}", str(value)):
-        return f"I don't know the color '{name_or_hex}'."
+        return tr("I don't know the color '{name}'.").format(name=name_or_hex)
     start("skyline-sky", "accent", value)
-    return f"Accent color set to {name_or_hex}."
+    return tr("Accent color set to {name}.").format(name=ACCENT_NAMES.get(name_or_hex, name_or_hex))
+
+
+def update_skyline():
+    in_terminal("skyline-update", "install")
+    return tr("Checking for a new SkyLine version in a terminal window. If there is one, it installs it "
+              "(it may ask for your password).")
 
 
 def install_apps(ids):
     wanted = [i for i in ids if i in APPS or i == "nvidia"]
     if not wanted:
-        return "I don't know those apps. I can install: " + ", ".join(v[0] for v in APPS.values()) + "."
+        return tr("I don't know those apps. I can install: {apps}.").format(
+            apps=", ".join(v[0] for v in APPS.values()))
     in_terminal("/usr/lib/skyline/install-apps", *wanted)
-    names = [APPS[i][0] if i in APPS else "the NVIDIA driver" for i in wanted]
-    return "Installing " + ", ".join(names) + " in a terminal window. It may ask for your password."
+    names = [APPS[i][0] if i in APPS else tr("the NVIDIA driver") for i in wanted]
+    return tr("Installing {apps} in a terminal window. It may ask for your password.").format(
+        apps=", ".join(names))

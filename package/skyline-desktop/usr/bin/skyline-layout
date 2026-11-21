@@ -33,12 +33,14 @@ apply() {
 
 menu() {
 	local choice
-	choice=$(kdialog --title "SkyLine Layout" --icon skyline --radiolist \
-		"Pick a desktop layout. Your current panels will be replaced." \
-		classic "Classic: one bar at the bottom" on \
-		dock "Dock: top bar and an app dock" off \
-		minimal "Minimal: one small floating bar" off \
-		shell "SkyLine Shell: top bar and a dock with Puff" off) || exit 0
+	# shellcheck source=/dev/null
+	. "${SKYLINE_LIB:-/usr/lib/skyline}/i18n.sh"
+	choice=$(kdialog --title "$(t "SkyLine Layout")" --icon skyline --radiolist \
+		"$(t "Pick a desktop layout. Your current panels will be replaced.")" \
+		shell "$(t "SkyLine Shell: top bar and a dock with Puff")" on \
+		classic "$(t "Classic: one bar at the bottom")" off \
+		dock "$(t "Dock: top bar and an app dock")" off \
+		minimal "$(t "Minimal: one small floating bar")" off) || exit 0
 	[[ -n $choice ]] && apply "$choice"
 }
 

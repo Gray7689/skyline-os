@@ -31,6 +31,10 @@ firmware-linux
 amd64-microcode
 intel-microcode
 
+# --- Italian: Firefox, spell checking and LibreOffice in Italian (KDE and SkyLine already include it)
+locales
+task-italian-desktop
+
 # --- Everyday basics
 curl
 gnupg

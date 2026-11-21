@@ -12,7 +12,8 @@
         "Id": "org.skyline.puff",
         "License": "GPL-2.0-or-later",
         "Name": "Puff",
-        "Version": "1.2"
+        "Version": "1.3",
+        "Description[it]": "Puff, la nuvoletta di SkyLine: cliccalo per chiacchierare"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }

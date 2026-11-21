@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# skyline-windows: how window title bars look.
+#
+#   skyline-windows skyline    SkyLine style: three round buttons, colors follow the sky
+#   skyline-windows breeze     KDE's Breeze style
+#   skyline-windows left       buttons on the left (close, minimize, maximize)
+#   skyline-windows right      buttons on the right (minimize, maximize, close)
+#   skyline-windows sync       match the current sky (skyline-sky calls this)
+#   skyline-windows status     show the current setting
+set -euo pipefail
+
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/skyline"
+CONF="$CONF_DIR/windows.conf"
+
+usage() {
+	sed -n '2,10s/^# \{0,1\}//p' "$0"
+}
+
+get() { # get KEY DEFAULT
+	local v=""
+	[[ -f $CONF ]] && v=$(sed -n "s/^$1=//p" "$CONF" | tail -n 1)
+	echo "${v:-$2}"
+}
+
+set_key() {
+	mkdir -p "$CONF_DIR"
+	local tmp
+	tmp=$(mktemp)
+	[[ -f $CONF ]] && grep -v "^$1=" "$CONF" >"$tmp" || true
+	printf '%s=%s\n' "$1" "$2" >>"$tmp"
+	mv "$tmp" "$CONF"
+}
+
+mood() { # the SkyLine-<Mood> theme for the sky on screen now
+	local sky
+	sky=$(skyline-sky status 2>/dev/null | sed -n 's/^sky now: //p' | awk '{print $1}')
+	case $sky in
+		day) echo Sky ;;
+		dusk) echo Dusk ;;
+		night) echo Night ;;
+		*) echo Peach ;;
+	esac
+}
+
+kw() { kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 "$@" >/dev/null 2>&1 || true; }
+
+apply() {
+	local style buttons theme
+	style=$(get style breeze)
+	buttons=$(get buttons left)
+	if [[ $style == skyline ]]; then
+		theme="__aurorae__svg__SkyLine-$(mood)"
+		# Already showing it? Then don't make KWin reload (it would flicker every sky tick).
+		if [[ $(kreadconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme 2>/dev/null) == "$theme" &&
+			${1:-} == quiet ]]; then
+			return 0
+		fi
+		kw --key library org.kde.kwin.aurorae
+		kw --key theme "$theme"
+	else
+		[[ ${1:-} == quiet ]] && return 0
+		kw --key library org.kde.breeze
+		kw --key theme Breeze
+	fi
+	if [[ $buttons == right ]]; then
+		kw --key ButtonsOnLeft "M"
+		kw --key ButtonsOnRight "IAX"
+	else
+		kw --key ButtonsOnLeft "XIA"
+		kw --key ButtonsOnRight ""
+	fi
+	dbus-send --session --type=method_call --dest=org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+}
+
+case "${1:-status}" in
+	skyline | breeze)
+		set_key style "$1"
+		apply
+		;;
+	left | right)
+		set_key buttons "$1"
+		apply
+		;;
+	sync)
+		# Only the SkyLine style changes with the sky; leave Breeze (or anything the user set) alone.
+		[[ $(get style none) == skyline ]] && apply quiet
+		;;
+	status)
+		echo "style: $(get style breeze)"
+		echo "buttons: $(get buttons left)"
+		;;
+	-h | --help) usage ;;
+	*)
+		usage >&2
+		exit 2
+		;;
+esac

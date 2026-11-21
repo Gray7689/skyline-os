@@ -1,6 +1,10 @@
 #!/bin/sh
 # skyline-desktop: turn on SkyLine's timers, refresh icons and the boot splash.
 set -e
+# Lock screen and login screen: rebuilt on install and whenever Breeze changes (see debian/triggers).
+if [ "$1" = configure ] || [ "$1" = triggered ]; then
+	/usr/lib/skyline/sync-breeze-copies || true
+fi
 if [ "$1" = configure ]; then
 	systemctl --global enable skyline-sky.timer skyline-update.timer >/dev/null 2>&1 || true
 	if command -v gtk-update-icon-cache >/dev/null 2>&1; then
@@ -10,6 +14,9 @@ if [ "$1" = configure ]; then
 	if command -v plymouth-set-default-theme >/dev/null 2>&1 && [ -d /usr/share/plymouth/themes/skyline ]; then
 		if [ "$(plymouth-set-default-theme 2>/dev/null || true)" != skyline ]; then
 			plymouth-set-default-theme skyline || true
+			update-initramfs -u || true
+		elif [ -n "${2:-}" ] && dpkg --compare-versions "$2" lt 1.3.0; then
+			# 1.3 adds "SkyLine booting up..." to the boot screen: put the new picture in the boot files.
 			update-initramfs -u || true
 		fi
 	fi

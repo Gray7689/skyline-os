@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Game Mode
+Name[it]=Modalità gioco
 GenericName=SkyLine Game Mode
+GenericName[it]=Modalità gioco di SkyLine
 Comment=Maximum performance and no notifications while you play
+Comment[it]=Massime prestazioni e niente notifiche mentre giochi
 Icon=input-gaming
 Exec=skyline-gamemode toggle
 Terminal=false
@@ -12,8 +15,10 @@ Actions=On;Off;
 
 [Desktop Action On]
 Name=Turn Game Mode on
+Name[it]=Attiva la modalità gioco
 Exec=skyline-gamemode on
 
 [Desktop Action Off]
 Name=Turn Game Mode off
+Name[it]=Disattiva la modalità gioco
 Exec=skyline-gamemode off

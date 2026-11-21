@@ -1,24 +1,26 @@
 #!/usr/bin/env bash
 # skyline-apps: pick your everyday apps and install them in one go.
 set -euo pipefail
+# shellcheck source=/dev/null
+. "${SKYLINE_LIB:-/usr/lib/skyline}/i18n.sh"
 
 # Offer NVIDIA's driver only on PCs with an NVIDIA card that don't have it yet.
 nvidia_choice=()
 if lspci 2>/dev/null | grep -qi nvidia && ! command -v nvidia-smi >/dev/null 2>&1; then
-	nvidia_choice=(nvidia "NVIDIA graphics driver (games, external monitors)" on)
+	nvidia_choice=(nvidia "$(t "NVIDIA graphics driver (games, external monitors)")" on)
 fi
 
-choices=$(kdialog --title "SkyLine Apps" --icon skyline --geometry 480x440 --separate-output --checklist \
-	"Pick the apps you want. SkyLine installs them for you." \
-	claude "Claude (AI assistant)" on \
+choices=$(kdialog --title "$(t "SkyLine Apps")" --icon skyline --geometry 480x440 --separate-output --checklist \
+	"$(t "Pick the apps you want. SkyLine installs them for you.")" \
+	claude "$(t "Claude (AI assistant)")" on \
 	discord "Discord" on \
-	steam "Steam (games)" on \
-	sober "Roblox player (Sober, unofficial)" off \
-	vinegar "Roblox Studio (Vinegar, unofficial)" off \
+	steam "$(t "Steam (games)")" on \
+	sober "$(t "Roblox player (Sober, unofficial)")" off \
+	vinegar "$(t "Roblox Studio (Vinegar, unofficial)")" off \
 	prism "Minecraft (Prism Launcher)" off \
 	spotify "Spotify" off \
 	vscode "Visual Studio Code" off \
-	obs "OBS Studio (record and stream)" off \
+	obs "$(t "OBS Studio (record and stream)")" off \
 	"${nvidia_choice[@]}") || exit 0
 
 [[ -n $choices ]] || exit 0

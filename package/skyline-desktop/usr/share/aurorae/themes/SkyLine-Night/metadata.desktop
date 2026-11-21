@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=SkyLine Night
+Comment=SkyLine window style: three round buttons
+X-KDE-PluginInfo-Author=SkyLine
+X-KDE-PluginInfo-Name=SkyLine-Night
+X-KDE-PluginInfo-Version=1.3
+X-KDE-PluginInfo-License=GPL-2.0-or-later
+X-KDE-ServiceTypes=KWin/Decoration

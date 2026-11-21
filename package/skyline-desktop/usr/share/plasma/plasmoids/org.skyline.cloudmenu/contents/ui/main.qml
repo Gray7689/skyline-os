@@ -19,8 +19,8 @@ PlasmoidItem {
 
     switchWidth: Kirigami.Units.gridUnit * 20
     switchHeight: Kirigami.Units.gridUnit * 20
-    toolTipMainText: "Cloud Menu"
-    toolTipSubText: "Your apps, search, the sky and Puff"
+    toolTipMainText: i18n("Cloud Menu")
+    toolTipSubText: i18n("Your apps, search, the sky and Puff")
 
     Kicker.RootModel {
         id: rootModel

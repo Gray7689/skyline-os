@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "SkyLine" }],
+        "Category": "Windows and Tasks",
+        "Description": "SkyLine's dock: your pinned apps and open windows",
+        "Description[it]": "Il dock di SkyLine: le tue app fissate e le finestre aperte",
+        "Icon": "skyline",
+        "Id": "org.skyline.dock",
+        "License": "GPL-2.0-or-later",
+        "Name": "SkyLine Dock",
+        "Name[it]": "Dock di SkyLine",
+        "Version": "1.3"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-Provides": ["org.kde.plasma.multitasking"]
+}

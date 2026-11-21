@@ -1,5 +1,5 @@
 // SkyLine boot splash for Plymouth.
-// Peach background, centered logo, progress bar, and a password box for encrypted disks.
+// Peach background, centered logo, the words SkyLine booting up, progress bar, and a password box for encrypted disks.
 
 Window.SetBackgroundTopColor(1.0, 0.847, 0.8);
 Window.SetBackgroundBottomColor(1.0, 0.847, 0.8);
@@ -17,11 +17,18 @@ logo.x = center_x - logo.image.GetWidth() / 2;
 logo.y = screen_y + screen_h / 2 - logo.image.GetHeight() / 2 - 40;
 logo.sprite.SetPosition(logo.x, logo.y, 1);
 
+// "SkyLine booting up..." under the logo
+words.image = Image("booting.png");
+words.sprite = Sprite(words.image);
+words.x = center_x - words.image.GetWidth() / 2;
+words.y = logo.y + logo.image.GetHeight() + 22;
+words.sprite.SetPosition(words.x, words.y, 1);
+
 // Progress bar
 track.image = Image("bar-bg.png");
 track.sprite = Sprite(track.image);
 track.x = center_x - track.image.GetWidth() / 2;
-track.y = logo.y + logo.image.GetHeight() + 48;
+track.y = words.y + words.image.GetHeight() + 22;
 track.sprite.SetPosition(track.x, track.y, 1);
 
 fill.image = Image("bar-fill.png");

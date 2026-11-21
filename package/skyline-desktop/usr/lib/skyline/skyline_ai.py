@@ -10,6 +10,7 @@ import urllib.error
 import urllib.request
 
 import skyline_common as sk
+from skyline_i18n import language, tr
 
 CONF = sk.CONFIG_DIR / "assistant.conf"
 
@@ -27,9 +28,9 @@ PROVIDERS = {
                "url": "https://generativelanguage.googleapis.com/v1beta/openai", "model": "", "key": True},
     "openrouter": {"label": "OpenRouter", "kind": "openai", "url": "https://openrouter.ai/api/v1",
                    "model": "openrouter/auto", "key": True},
-    "ollama": {"label": "Ollama (on this computer, no key)", "kind": "openai", "url": "http://localhost:11434/v1",
+    "ollama": {"label": tr("Ollama (on this computer, no key)"), "kind": "openai", "url": "http://localhost:11434/v1",
                "model": "", "key": False},
-    "custom": {"label": "Other OpenAI-compatible server", "kind": "openai", "url": "", "model": "", "key": True},
+    "custom": {"label": tr("Other OpenAI-compatible server"), "kind": "openai", "url": "", "model": "", "key": True},
 }
 
 SYSTEM_PROMPT = (
@@ -61,6 +62,8 @@ TOOLS = [
      "on=false: SkyLine wallpapers again.", {"on": {"type": "boolean"}}, ["on"]),
     ("open_app", "Open an app by name, for example files, terminal, browser, store, settings, discord, steam.",
      {"name": {"type": "string"}}, ["name"]),
+    ("update_skyline", "Check for a new SkyLine version and install it (opens a terminal window, may ask for the password).",
+     {}, []),
 ]
 
 SKIP_MODEL_WORDS = ("embed", "whisper", "tts", "dall-e", "image", "audio", "moderation", "rerank", "guard",
@@ -123,8 +126,9 @@ def _request(url, headers, body=None, timeout=60):
             pass
         raise AIError(f"{e.code}: {str(detail)[:240]}") from e
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        raise AIError("Can't reach the AI service. Check your internet connection"
-                      + (" and that Ollama is running." if "localhost" in url else ".")) from e
+        raise AIError(tr("Can't reach the AI service. Check your internet connection and that Ollama is running.")
+                      if "localhost" in url else
+                      tr("Can't reach the AI service. Check your internet connection.")) from e
 
 
 def _headers(cfg):
@@ -157,12 +161,18 @@ def list_models(cfg):
 
 # ------------------------------------------------------------------ chatting
 
+def system_prompt():
+    if language() == "it":
+        return SYSTEM_PROMPT + " The user's desktop is in Italian: reply in Italian unless they write in another language."
+    return SYSTEM_PROMPT
+
+
 def _anthropic_chat(cfg, history, run_tool, use_tools):
     tools = [{"name": n, "description": d, "input_schema": {"type": "object", "properties": p, "required": r}}
              for n, d, p, r in TOOLS]
     messages = [{"role": m["role"], "content": m["content"]} for m in history]
     for _ in range(4):
-        body = {"model": cfg["model"], "max_tokens": 700, "system": SYSTEM_PROMPT, "messages": messages}
+        body = {"model": cfg["model"], "max_tokens": 700, "system": system_prompt(), "messages": messages}
         if use_tools:
             body["tools"] = tools
         data = _request(cfg["url"].rstrip("/") + "/messages", _headers(cfg), body)
@@ -170,18 +180,18 @@ def _anthropic_chat(cfg, history, run_tool, use_tools):
         uses = [b for b in content if b.get("type") == "tool_use"]
         text = " ".join(b.get("text", "") for b in content if b.get("type") == "text").strip()
         if not uses:
-            return text or "Done!"
+            return text or tr("Done!")
         messages.append({"role": "assistant", "content": content})
         messages.append({"role": "user", "content": [
             {"type": "tool_result", "tool_use_id": u["id"], "content": run_tool(u["name"], u.get("input", {}))}
             for u in uses]})
-    return "Done!"
+    return tr("Done!")
 
 
 def _openai_chat(cfg, history, run_tool, use_tools, extra_system=""):
     tools = [{"type": "function", "function": {"name": n, "description": d,
               "parameters": {"type": "object", "properties": p, "required": r}}} for n, d, p, r in TOOLS]
-    messages = [{"role": "system", "content": SYSTEM_PROMPT + extra_system}] + [
+    messages = [{"role": "system", "content": system_prompt() + extra_system}] + [
         {"role": m["role"], "content": m["content"]} for m in history]
     for _ in range(4):
         body = {"model": cfg["model"], "messages": messages}
@@ -192,7 +202,7 @@ def _openai_chat(cfg, history, run_tool, use_tools, extra_system=""):
         msg = data["choices"][0]["message"]
         calls = msg.get("tool_calls") or []
         if not calls:
-            return (msg.get("content") or "Done!").strip()
+            return (msg.get("content") or tr("Done!")).strip()
         messages.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})
         for c in calls:
             try:
@@ -201,7 +211,7 @@ def _openai_chat(cfg, history, run_tool, use_tools, extra_system=""):
                 args = {}
             messages.append({"role": "tool", "tool_call_id": c["id"],
                              "content": run_tool(c["function"]["name"], args)})
-    return "Done!"
+    return tr("Done!")
 
 
 def chat(cfg, history, run_tool, local_actions=None):
@@ -252,13 +262,13 @@ def setup_dialog(parent=None):
 
     current = load()
     dlg = QDialog(parent)
-    dlg.setWindowTitle("Connect an AI to Puff")
+    dlg.setWindowTitle(tr("Connect an AI to Puff"))
     dlg.setMinimumWidth(520)
     jobs = []
 
-    intro = QLabel("Pick an AI service and paste your API key. Puff then chats with you about anything and "
+    intro = QLabel(tr("Pick an AI service and paste your API key. Puff then chats with you about anything and "
                    "still changes your desktop when you ask. Your key is saved only on this computer, and your "
-                   "messages to Puff go to the service you pick.")
+                   "messages to Puff go to the service you pick."))
     intro.setWordWrap(True)
 
     provider = QComboBox()
@@ -267,8 +277,8 @@ def setup_dialog(parent=None):
     provider.setCurrentIndex(max(0, provider.findData(current["provider"])))
     api_key = QLineEdit(current["api_key"])
     api_key.setEchoMode(QLineEdit.EchoMode.Password)
-    api_key.setPlaceholderText("Paste your API key")
-    show = QPushButton("Show")
+    api_key.setPlaceholderText(tr("Paste your API key"))
+    show = QPushButton(tr("Show"))
     show.setCheckable(True)
     show.toggled.connect(lambda on: api_key.setEchoMode(
         QLineEdit.EchoMode.Normal if on else QLineEdit.EchoMode.Password))
@@ -277,13 +287,13 @@ def setup_dialog(parent=None):
     model = QComboBox()
     model.setEditable(True)
     model.setCurrentText(current["model"])
-    load_btn = QPushButton("Load models")
+    load_btn = QPushButton(tr("Load models"))
     status = QLabel("")
     status.setWordWrap(True)
-    test_btn = QPushButton("Test")
+    test_btn = QPushButton(tr("Test"))
 
-    url_label = QLabel("Server URL")
-    key_label = QLabel("API key")
+    url_label = QLabel(tr("Server URL"))
+    key_label = QLabel(tr("API key"))
     key_row = QHBoxLayout()
     key_row.addWidget(api_key, 1)
     key_row.addWidget(show)
@@ -292,17 +302,17 @@ def setup_dialog(parent=None):
     model_row.addWidget(load_btn)
 
     form = QGridLayout()
-    form.addWidget(QLabel("AI service"), 0, 0)
+    form.addWidget(QLabel(tr("AI service")), 0, 0)
     form.addWidget(provider, 0, 1)
     form.addWidget(key_label, 1, 0)
     form.addLayout(key_row, 1, 1)
     form.addWidget(url_label, 2, 0)
     form.addWidget(url, 2, 1)
-    form.addWidget(QLabel("Model"), 3, 0)
+    form.addWidget(QLabel(tr("Model")), 3, 0)
     form.addLayout(model_row, 3, 1)
 
     buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
-    off_btn = buttons.addButton("Turn AI off", QDialogButtonBox.ButtonRole.DestructiveRole)
+    off_btn = buttons.addButton(tr("Turn AI off"), QDialogButtonBox.ButtonRole.DestructiveRole)
     bottom = QHBoxLayout()
     bottom.addWidget(test_btn)
     bottom.addWidget(status, 1)
@@ -345,39 +355,39 @@ def setup_dialog(parent=None):
     def models_loaded(result):
         load_btn.setEnabled(True)
         if isinstance(result, Exception):
-            status.setText("Couldn't load models: " + str(result))
+            status.setText(tr("Couldn't load models: ") + str(result))
             return
         keep = model.currentText()
         model.clear()
         model.addItems(result)
         model.setCurrentText(keep if keep in result else (result[0] if result else keep))
-        status.setText(f"{len(result)} models found. Pick one, then press Test.")
+        status.setText(tr("{count} models found. Pick one, then press Test.").format(count=len(result)))
 
     def tested(result):
         test_btn.setEnabled(True)
         if isinstance(result, Exception):
-            status.setText("Didn't work: " + str(result))
+            status.setText(tr("Didn't work: ") + str(result))
         else:
-            status.setText("It works! Puff says: " + str(result)[:120])
+            status.setText(tr("It works! Puff says: ") + str(result)[:120])
 
     def do_load():
         load_btn.setEnabled(False)
-        status.setText("Loading models…")
+        status.setText(tr("Loading models…"))
         background(list_models, chosen(), models_loaded)
 
     def do_test():
         cfg = chosen()
         if not ready(cfg):
-            status.setText("Fill in the key and model first.")
+            status.setText(tr("Fill in the key and model first."))
             return
         test_btn.setEnabled(False)
-        status.setText("Asking the AI…")
+        status.setText(tr("Asking the AI…"))
         background(test, cfg, tested)
 
     def do_save():
         cfg = chosen()
         if not ready(cfg):
-            status.setText("Fill in the key and model first (press Load models to see them).")
+            status.setText(tr("Fill in the key and model first (press Load models to see them)."))
             return
         save(cfg["provider"], cfg["api_key"], cfg["model"],
              cfg["url"] if cfg["provider"] in ("custom", "ollama") else "")

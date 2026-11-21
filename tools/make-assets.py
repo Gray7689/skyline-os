@@ -427,6 +427,7 @@ def main():
     render(icon_svg(full=True), ply / "logo.png", 200, 200)
     render(bar_svg(240, 8, "#FFC3B2"), ply / "bar-bg.png")
     render(bar_svg(240, 8, "#23264A"), ply / "bar-fill.png")
+    plymouth_text(ply / "booting.png")
 
     # Installer (Calamares) branding
     cal = INC / "etc/calamares/branding/skyline"
@@ -444,6 +445,25 @@ def main():
     layout_previews(peach)
     render(icon_svg(full=True), INC / "usr/share/skyline/logo.png", 128, 128)
     print("SkyLine assets rendered.")
+
+
+def plymouth_text(out, text="SkyLine booting up…"):
+    """The line under the logo on the boot screen, drawn into a picture so it shows on every computer
+    (Plymouth's own text needs fonts that aren't always in the boot files)."""
+    from PIL import Image, ImageDraw, ImageFont
+    font = None
+    for path in ("/usr/share/fonts/opentype/inter/Inter-SemiBold.otf",
+                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
+        if Path(path).exists():
+            font = ImageFont.truetype(path, 30)
+            break
+    font = font or ImageFont.load_default()
+    box = ImageDraw.Draw(Image.new("RGBA", (1, 1))).textbbox((0, 0), text, font=font)
+    w, h = box[2] - box[0] + 8, box[3] - box[1] + 12
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(img).text((4 - box[0], 6 - box[1]), text, font=font, fill=(35, 38, 74, 255))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    img.save(out)
 
 
 if __name__ == "__main__":

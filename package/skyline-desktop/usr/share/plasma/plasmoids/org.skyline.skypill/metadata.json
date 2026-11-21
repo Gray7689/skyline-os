@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{ "Name": "SkyLine" }],
+        "Category": "Utilities",
+        "Description": "The sky and weather in your top bar, with quick SkyLine switches",
+        "Description[it]": "Il cielo e il meteo nella barra in alto, con gli interruttori rapidi di SkyLine",
+        "Icon": "weather-few-clouds",
+        "Id": "org.skyline.skypill",
+        "License": "GPL-2.0-or-later",
+        "Name": "SkyLine Sky",
+        "Name[it]": "Cielo di SkyLine",
+        "Version": "1.3"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

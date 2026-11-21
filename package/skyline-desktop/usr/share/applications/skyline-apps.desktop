@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=SkyLine Apps
+Name[it]=App di SkyLine
 GenericName=App installer
+GenericName[it]=Installa app
 Comment=Install Claude, Discord, Steam, Roblox, Minecraft and more
+Comment[it]=Installa Claude, Discord, Steam, Roblox, Minecraft e altro
 Icon=skyline
 Exec=skyline-apps
 Terminal=false

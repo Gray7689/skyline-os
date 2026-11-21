@@ -9,6 +9,8 @@
 # Games run on the NVIDIA card when started with "skyline-play GAME"
 # (SkyLine Settings > Gaming shows the Steam launch option to copy).
 set -euo pipefail
+# shellcheck source=/dev/null
+. "${SKYLINE_LIB:-/usr/lib/skyline}/i18n.sh"
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/skyline"
 FLAG="$STATE_DIR/gamemode-on"
@@ -30,7 +32,7 @@ turn_on() {
 		powerprofilesctl set performance >/dev/null 2>&1 || true
 	fi
 	# Say it before muting notifications.
-	say "Game Mode on" "Maximum performance. Notifications are muted until you turn it off."
+	say "$(t "Game Mode on")" "$(t "Maximum performance. Notifications are muted until you turn it off.")"
 	if [[ ! -f $PIDFILE ]] || ! kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
 		setsid -f python3 /usr/lib/skyline/dnd-hold "$PIDFILE" >/dev/null 2>&1 || true
 	fi
@@ -49,7 +51,7 @@ turn_off() {
 		powerprofilesctl set "$profile" >/dev/null 2>&1 || true
 	fi
 	rm -f "$FLAG" "$PREV"
-	say "Game Mode off" "Back to normal."
+	say "$(t "Game Mode off")" "$(t "Back to normal.")"
 }
 
 case "${1:-status}" in

@@ -1,8 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=SkyLine Settings
+Name[it]=Impostazioni di SkyLine
 GenericName=Customize SkyLine
+GenericName[it]=Personalizza SkyLine
 Comment=Sky, weather, taskbar, layout, apps and gaming
+Comment[it]=Cielo, meteo, barra, disposizione, app e giochi
 Icon=skyline
 Exec=skyline-settings
 Terminal=false
@@ -12,28 +15,35 @@ Actions=SkyAuto;SkyNight;TaskbarClear;TaskbarBlack;LayoutClassic;LayoutDock;Layo
 
 [Desktop Action SkyAuto]
 Name=Sky: follow the time of day
+Name[it]=Cielo: segui l'ora del giorno
 Exec=skyline-sky auto
 
 [Desktop Action SkyNight]
 Name=Sky: night (dark)
+Name[it]=Cielo: notte (scuro)
 Exec=skyline-sky night
 
 [Desktop Action TaskbarClear]
 Name=Taskbar: clear
+Name[it]=Barra: trasparente
 Exec=skyline-taskbar clear
 
 [Desktop Action TaskbarBlack]
 Name=Taskbar: black
+Name[it]=Barra: nera
 Exec=skyline-taskbar black
 
 [Desktop Action LayoutClassic]
 Name=Layout: Classic
+Name[it]=Disposizione: Classica
 Exec=skyline-layout classic
 
 [Desktop Action LayoutDock]
 Name=Layout: Dock
+Name[it]=Disposizione: Dock
 Exec=skyline-layout dock
 
 [Desktop Action LayoutMinimal]
 Name=Layout: Minimal
+Name[it]=Disposizione: Minimale
 Exec=skyline-layout minimal

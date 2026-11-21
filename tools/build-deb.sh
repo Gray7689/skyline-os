@@ -19,7 +19,7 @@ find "$stage" -type f -exec chmod 0644 {} +
 chmod 0755 "$stage"/usr/bin/* \
 	"$stage"/usr/lib/skyline/install-apps "$stage"/usr/lib/skyline/install-claude \
 	"$stage"/usr/lib/skyline/install-nvidia "$stage"/usr/lib/skyline/ensure-nonfree \
-	"$stage"/usr/lib/skyline/dnd-hold
+	"$stage"/usr/lib/skyline/dnd-hold "$stage"/usr/lib/skyline/sync-breeze-copies
 
 mkdir -p "$stage/DEBIAN"
 cp package/debian/control "$stage/DEBIAN/control"
@@ -28,6 +28,7 @@ install -m 0755 package/debian/postinst "$stage/DEBIAN/postinst"
 install -m 0755 package/debian/prerm "$stage/DEBIAN/prerm"
 install -m 0755 package/debian/preinst "$stage/DEBIAN/preinst"
 install -m 0755 package/debian/postrm "$stage/DEBIAN/postrm"
+install -m 0644 package/debian/triggers "$stage/DEBIAN/triggers"
 
 mkdir -p dist
 dpkg-deb --root-owner-group -Zxz --build "$stage" "dist/$name" >/dev/null
