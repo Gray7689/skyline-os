@@ -1,3 +1,8 @@
+## SkyLine 1.1.2
+
+- Your own wallpaper stays: if you pick a wallpaper in KDE, SkyLine only changes the colors. Choosing a sky in SkyLine Settings (or asking Puff) brings the SkyLine wallpaper back.
+- New: Settings > Sky > "Keep my own wallpaper", and Puff understands "keep my wallpaper".
+
 ## SkyLine 1.1.1
 
 - Fix: installing on a PC with Debian's desktop-base package (every SkyLine 1.0 install) stopped with "trying to overwrite /etc/xdg/kcm-about-distrorc".
@@ -18,7 +23,7 @@
 
 **Install on SkyLine 1.0**
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.1.1/skyline-desktop_1.1.1_all.deb
-sudo apt install ./skyline-desktop_1.1.1_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.1.2/skyline-desktop_1.1.2_all.deb
+sudo apt install ./skyline-desktop_1.1.2_all.deb
 ```
 Then log out and back in.

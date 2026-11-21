@@ -7,6 +7,7 @@
 #   skyline-sky weather on|off           show real rain, snow and clouds
 #   skyline-sky place LAT LON NAME       where to check the weather
 #   skyline-sky accent '#RRGGBB'|none    accent color on top of the sky colors
+#   skyline-sky wallpaper mine|auto      mine = never change my wallpaper, only colors
 #   skyline-sky menu                     pick in a small window
 #   skyline-sky tick                     apply the right sky now (timer and login use this)
 set -euo pipefail
@@ -17,9 +18,10 @@ STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/skyline"
 STATE="$STATE_DIR/sky-applied"
 WEATHER_CACHE="$STATE_DIR/weather"
 WALLPAPERS=/usr/share/wallpapers
+APPLETS="${XDG_CONFIG_HOME:-$HOME/.config}/plasma-org.kde.plasma.desktop-appletsrc"
 
 usage() {
-	sed -n '2,13s/^# \{0,1\}//p' "$0"
+	sed -n '2,14s/^# \{0,1\}//p' "$0"
 }
 
 get() { # get KEY DEFAULT
@@ -114,6 +116,47 @@ current_weather() {
 	fi
 }
 
+# Prints "sky" if the desktop shows a SkyLine wallpaper, "custom" if the user picked their own.
+desktop_wallpaper() {
+	[[ -f $APPLETS ]] || {
+		echo sky
+		return
+	}
+	python3 - "$APPLETS" <<'PY'
+import re, sys
+current, kind, plugin, image = None, {}, {}, {}
+for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
+    line = line.strip()
+    m = re.fullmatch(r"\[Containments\]\[(\d+)\](.*)", line)
+    if m:
+        current = (m.group(1), m.group(2))
+        continue
+    if line.startswith("["):
+        current = None
+        continue
+    if current is None or "=" not in line:
+        continue
+    key, value = line.split("=", 1)
+    cid, sub = current
+    if sub == "" and key == "plugin":
+        kind[cid] = value
+    elif sub == "" and key == "wallpaperplugin":
+        plugin[cid] = value
+    elif sub == "[Wallpaper][org.kde.image][General]" and key == "Image":
+        image[cid] = value
+for cid, k in kind.items():
+    if k not in ("org.kde.plasma.folder", "org.kde.desktopcontainment"):
+        continue
+    if plugin.get(cid, "org.kde.image") != "org.kde.image":
+        print("custom")
+        sys.exit()
+    if image.get(cid) and "/usr/share/wallpapers/SkyLine-" not in image[cid]:
+        print("custom")
+        sys.exit()
+print("sky")
+PY
+}
+
 # sky name -> "ColorScheme WallpaperPackage"
 look_for() {
 	case $1 in
@@ -124,12 +167,19 @@ look_for() {
 	esac
 }
 
+# apply SKY [force] [wallpaper]: "wallpaper" = the user just picked this sky, so show its wallpaper too.
 apply() {
-	local sky=$1 force=${2:-}
-	local weather accent key
+	local sky=$1 force=${2:-} pick_wallpaper=${3:-}
+	local weather accent key touch_wallpaper=yes
 	weather=$(current_weather)
 	accent=$(get accent none)
 	key="$sky $weather $accent"
+	# Respect a wallpaper the user chose themselves: then SkyLine only changes the colors.
+	if [[ $pick_wallpaper != wallpaper ]]; then
+		if [[ $(get wallpaper auto) == mine || $(desktop_wallpaper) == custom ]]; then
+			touch_wallpaper=no
+		fi
+	fi
 	if [[ -z $force && -f $STATE && $(cat "$STATE") == "$key" ]]; then
 		return 0
 	fi
@@ -150,10 +200,12 @@ apply() {
 		kwriteconfig6 --file kdeglobals --group General --key AccentColor --delete >/dev/null 2>&1 || true
 		plasma-apply-colorscheme "$scheme" >/dev/null 2>&1 || true
 	fi
-	plasma-apply-wallpaperimage "$image" >/dev/null 2>&1 || true
-	# The lock screen shows the same sky.
-	kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General \
-		--key Image "file://$image" >/dev/null 2>&1 || true
+	if [[ $touch_wallpaper == yes ]]; then
+		plasma-apply-wallpaperimage "$image" >/dev/null 2>&1 || true
+		# The lock screen shows the same sky.
+		kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General \
+			--key Image "file://$image" >/dev/null 2>&1 || true
+	fi
 
 	mkdir -p "$STATE_DIR"
 	echo "$key" >"$STATE"
@@ -176,11 +228,22 @@ case "${1:-status}" in
 	tick) apply "$(current_sky)" ;;
 	auto)
 		set_key mode auto
-		apply "$(sky_for_now)" force
+		set_key wallpaper auto
+		apply "$(sky_for_now)" force wallpaper
 		;;
 	sunrise | day | dusk | night)
 		set_key mode "$1"
-		apply "$1" force
+		set_key wallpaper auto
+		apply "$1" force wallpaper
+		;;
+	wallpaper)
+		case "${2:-}" in
+			mine | auto) set_key wallpaper "$2" ;;
+			*)
+				echo "Use: skyline-sky wallpaper mine|auto" >&2
+				exit 2
+				;;
+		esac
 		;;
 	weather)
 		case "${2:-}" in
@@ -223,6 +286,7 @@ case "${1:-status}" in
 		echo "sky now: $(current_sky)"
 		echo "weather: $(get weather off) ($(get place 'no place set'))"
 		echo "accent: $(get accent none)"
+		echo "wallpaper: $(get wallpaper auto) (desktop shows: $(desktop_wallpaper))"
 		;;
 	-h | --help) usage ;;
 	*)

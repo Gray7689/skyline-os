@@ -41,7 +41,8 @@ SYSTEM_PROMPT = (
 )
 
 TOOLS = [
-    ("set_sky", "Change the desktop sky (wallpaper, colors, lock screen). 'auto' follows the time of day.",
+    ("set_sky", "Change the desktop sky (SkyLine wallpaper, colors, lock screen). 'auto' follows the time of "
+     "day. Only use it when the user asks for a sky or a SkyLine wallpaper.",
      {"mode": {"type": "string", "enum": list(sk.SKIES)}}, ["mode"]),
     ("set_layout", "Change the desktop layout: classic (bar at the bottom), dock (top bar + app dock), minimal.",
      {"name": {"type": "string", "enum": list(sk.LAYOUTS)}}, ["name"]),
@@ -55,6 +56,8 @@ TOOLS = [
      {"color": {"type": "string", "enum": list(sk.ACCENTS)}}, ["color"]),
     ("install_apps", "Install apps in a terminal window (may ask for the password). 'nvidia' is the graphics driver.",
      {"apps": {"type": "array", "items": {"type": "string", "enum": list(sk.APPS) + ["nvidia"]}}}, ["apps"]),
+    ("keep_own_wallpaper", "on=true: never change the user's own wallpaper (only the colors follow the sky). "
+     "on=false: SkyLine wallpapers again.", {"on": {"type": "boolean"}}, ["on"]),
     ("open_app", "Open an app by name, for example files, terminal, browser, store, settings, discord, steam.",
      {"name": {"type": "string"}}, ["name"]),
 ]

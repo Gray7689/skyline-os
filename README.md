@@ -27,8 +27,8 @@ This folder is the whole recipe. One command turns it into an ISO you can put on
 ## Already on SkyLine 1.0? Update in two commands
 
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.1.1/skyline-desktop_1.1.1_all.deb
-sudo apt install ./skyline-desktop_1.1.1_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.1.2/skyline-desktop_1.1.2_all.deb
+sudo apt install ./skyline-desktop_1.1.2_all.deb
 ```
 Log out and back in. From now on SkyLine tells you when a new version is out.
 

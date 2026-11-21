@@ -175,7 +175,7 @@ class SkyPage:
             pm = auto_thumb() if mode == "auto" else thumb(sk.SKY_WALLPAPER[mode])
             b = card(label, pm, QSize(200, 112))
             b.setChecked(s["mode"] == mode)
-            b.clicked.connect(lambda _=False, m=mode: self.window.toast(sk.set_sky(m)))
+            b.clicked.connect(lambda _=False, m=mode: self.pick(m))
             self.group.addButton(b)
             grid.addWidget(b, i // 3, i % 3)
 
@@ -191,11 +191,23 @@ class SkyPage:
         row.addWidget(self.city, 1)
         row.addWidget(find)
         self.place = note("City: " + s.get("place", "not set yet"))
+        self.own = QCheckBox("Keep my own wallpaper (SkyLine only changes the colors)")
+        self.own.setChecked(s.get("wallpaper", "auto") == "mine")
+        self.own.toggled.connect(lambda on: self.window.toast(sk.keep_own_wallpaper(on)))
 
         self.widget = page(heading("Sky"),
                            note("Your wallpaper, window colors and lock screen. Pick one, or let SkyLine follow "
                                 "the time of day: sunrise 6–10, day 10–17, dusk 17–20, night after 20."),
-                           grid, section("Weather"), self.weather, row, self.place)
+                           grid, self.own,
+                           note("Picked your own wallpaper in KDE? SkyLine notices and leaves it alone. "
+                                "Choosing a sky above brings the SkyLine wallpaper back."),
+                           section("Weather"), self.weather, row, self.place)
+
+    def pick(self, mode):
+        self.own.blockSignals(True)
+        self.own.setChecked(False)
+        self.own.blockSignals(False)
+        self.window.toast(sk.set_sky(mode))
 
     def toggle_weather(self, on):
         if on and "lat" not in sk.sky_settings():

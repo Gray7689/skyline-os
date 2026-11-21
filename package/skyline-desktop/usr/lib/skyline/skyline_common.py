@@ -271,6 +271,12 @@ def set_sky(mode):
     return "Your sky now follows the time of day." if mode == "auto" else f"Switched to the {mode} sky."
 
 
+def keep_own_wallpaper(on):
+    start("skyline-sky", "wallpaper", "mine" if on else "auto")
+    return ("Got it: I'll never change your wallpaper, only the colors." if on
+            else "SkyLine may change the wallpaper again when you pick a sky.")
+
+
 def set_layout(name):
     if name not in LAYOUTS:
         return f"I don't know the layout '{name}'."

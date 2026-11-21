@@ -60,6 +60,11 @@ def local_brain(text):
     if len(t.split()) <= 3 and _has(t, "hi", "hello", "hey", "ciao", "salve", "yo"):
         return "Hi! I'm Puff, your SkyLine cloud. " + HELP
 
+    # Own wallpaper
+    if _has(t, "my wallpaper", "my own wallpaper", "mio sfondo", "my background"):
+        keep = not off and not _has(t, "change it", "cambialo", "use sky", "sky wallpaper")
+        replies.append(sk.keep_own_wallpaper(keep))
+
     # Game Mode
     if _has(t, "game mode", "gamemode", "modalità gioco", "modalita gioco", "gaming mode", "modalità gaming"):
         replies.append(sk.set_gamemode(not off))
@@ -130,7 +135,8 @@ def local_brain(text):
         replies.append(sk.open_app(m.group(1).strip(" .!?")))
 
     # Sky (last, so "black taskbar" isn't read as a dark sky)
-    if not replies or _has(t, "sky", "cielo", "wallpaper", "sfondo", "theme", "tema"):
+    if not replies or (_has(t, "sky", "cielo", "wallpaper", "sfondo", "theme", "tema")
+                       and not _has(t, "my wallpaper", "mio sfondo", "my own wallpaper", "my background")):
         sky = None
         if _has(t, "follow", "automatic", "automatico", "auto", "time of day"):
             sky = "auto" if _has(t, "sky", "cielo", "wallpaper", "sfondo", "theme", "tema", "time of day") else None
@@ -170,6 +176,8 @@ def run_tool(name, args):
             return sk.install_apps(list(args.get("apps", [])))
         if name == "open_app":
             return sk.open_app(args.get("name", ""))
+        if name == "keep_own_wallpaper":
+            return sk.keep_own_wallpaper(bool(args.get("on")))
     except Exception as e:  # a failing action shouldn't crash the chat
         return f"That didn't work: {e}"
     return f"Unknown tool {name}."
