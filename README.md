@@ -6,14 +6,15 @@ peach at sunrise, blue at noon, lavender at dusk, starry at night.
 
 This folder is the whole recipe. One command turns it into an ISO you can put on a USB stick.
 
-## What's in SkyLine 1.1
+## What's in SkyLine 1.2
 
 | | |
 |---|---|
 | **Desktop** | KDE Plasma 6. Drag, resize and restyle anything: panels, widgets, window buttons, icons, fonts, animations. |
 | **Dynamic sky** | Wallpaper, colors and lock screen follow the time of day, and the **real weather** (rain, snow, clouds) if you set your city. |
 | **Taskbar styles** | Follows the sky, **black**, **white**, **glass** (see-through) or **clear** (invisible). |
-| **Layouts** | One click: **Classic** (bar at the bottom), **Dock** (top bar + app dock), **Minimal** (small floating bar). |
+| **SkyLine Shell** | SkyLine's own desktop, piece by piece. Now: the **Cloud Menu** (start menu with Puff, search, pinned apps, sky and power buttons) and **Puff in the taskbar**. Next: our own dock, top bar, window style, lock screen. |
+| **Layouts** | One click: **Classic** (bar at the bottom), **Dock** (top bar + app dock), **Minimal** (small floating bar), **SkyLine Shell** (top bar + dock with the Cloud Menu and Puff). |
 | **Puff, the Assistant** | A pixel cloud you chat with. Changes your sky, layout, taskbar, Game Mode and apps. Works offline for simple requests (English and Italian); connect **Claude, OpenAI, NVIDIA, Groq, Gemini, OpenRouter, Ollama** or any OpenAI-compatible server to talk about anything. |
 | **SkyLine Settings** | One app for sky, weather, layout, taskbar, accent color, icons, sounds, apps, gaming, Puff and updates. |
 | **Game Mode** | Maximum performance and muted notifications. `skyline-play` runs games on the NVIDIA card. |
@@ -26,9 +27,11 @@ This folder is the whole recipe. One command turns it into an ISO you can put on
 
 ## Already on SkyLine 1.0? Update in two commands
 
+(On 1.1 or newer, just run `skyline-update install`.)
+
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.1.2/skyline-desktop_1.1.2_all.deb
-sudo apt install ./skyline-desktop_1.1.2_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.2.0/skyline-desktop_1.2.0_all.deb
+sudo apt install ./skyline-desktop_1.2.0_all.deb
 ```
 Log out and back in. From now on SkyLine tells you when a new version is out.
 
@@ -103,6 +106,7 @@ After that, a menu at start-up lets you pick SkyLine or Windows.
 | Wallpapers, weather skies, icons, sounds, boot and installer art | `tools/make-assets.py`, then run it |
 | Pre-installed programs | `config/package-lists/skyline.list.chroot` |
 | Desktop layouts | `package/skyline-desktop/usr/lib/skyline/layouts/*.js` |
+| SkyLine Shell widgets (Cloud Menu, Puff button) | `package/skyline-desktop/usr/share/plasma/plasmoids/org.skyline.*/` (QML) |
 | Puff's offline commands | `local_brain` in `package/skyline-desktop/usr/bin/skyline-assistant` |
 | AI services Puff can use | `PROVIDERS` in `package/skyline-desktop/usr/lib/skyline/skyline_ai.py` |
 | When each sky starts | `sky_for_now` in `package/skyline-desktop/usr/bin/skyline-sky` |

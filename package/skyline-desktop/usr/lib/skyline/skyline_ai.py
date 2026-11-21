@@ -44,7 +44,8 @@ TOOLS = [
     ("set_sky", "Change the desktop sky (SkyLine wallpaper, colors, lock screen). 'auto' follows the time of "
      "day. Only use it when the user asks for a sky or a SkyLine wallpaper.",
      {"mode": {"type": "string", "enum": list(sk.SKIES)}}, ["mode"]),
-    ("set_layout", "Change the desktop layout: classic (bar at the bottom), dock (top bar + app dock), minimal.",
+    ("set_layout", "Change the desktop layout: classic (bar at the bottom), dock (top bar + app dock), minimal, "
+     "shell (SkyLine Shell: top bar + dock with the Cloud Menu and Puff).",
      {"name": {"type": "string", "enum": list(sk.LAYOUTS)}}, ["name"]),
     ("set_taskbar", "Change the taskbar look: auto (follows the sky), black, white, glass (see-through), clear (invisible).",
      {"style": {"type": "string", "enum": list(sk.TASKBARS)}}, ["style"]),

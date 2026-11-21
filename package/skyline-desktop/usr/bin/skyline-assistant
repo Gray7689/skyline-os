@@ -87,7 +87,9 @@ def local_brain(text):
 
     # Layout
     layout = None
-    if _has(t, "dock", "mac", "macos"):
+    if _has(t, "skyline shell", "shell layout", "layout shell", "cloud menu"):
+        layout = "shell"
+    elif _has(t, "dock", "mac", "macos"):
         layout = "dock"
     elif _has(t, "classic", "classico", "like windows", "come windows"):
         layout = "classic"
@@ -440,11 +442,14 @@ def main():
     if len(sys.argv) > 2 and sys.argv[1] == "--ask":  # one-shot, for scripts: skyline-assistant --ask "make it night"
         print(local_brain(" ".join(sys.argv[2:])) or NO_KEY)
         return 0
+    say = " ".join(sys.argv[2:]) if len(sys.argv) > 2 and sys.argv[1] == "--say" else ""
     app = QApplication(sys.argv)
     app.setApplicationName("skyline-assistant")
     app.setDesktopFileName("skyline-assistant")
     w = AssistantWindow()
     w.show()
+    if say:  # skyline-assistant --say "question": open Puff and ask right away (used by the Cloud Menu)
+        QTimer.singleShot(400, lambda: w.send(say))
     return app.exec()
 
 

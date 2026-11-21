@@ -1,0 +1,21 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "SkyLine"
+            }
+        ],
+        "Category": "Application Launchers",
+        "Description": "SkyLine's start menu: apps, search, the sky and Puff",
+        "Icon": "skyline",
+        "Id": "org.skyline.cloudmenu",
+        "License": "GPL-2.0-or-later",
+        "Name": "Cloud Menu",
+        "Version": "1.2"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-Provides": [
+        "org.kde.plasma.launchermenu"
+    ]
+}

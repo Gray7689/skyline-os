@@ -73,6 +73,7 @@ LAYOUTS = {
     "classic": "Classic: one bar at the bottom",
     "dock": "Dock: top bar and an app dock",
     "minimal": "Minimal: one small floating bar",
+    "shell": "SkyLine Shell: top bar and a dock with Puff",
 }
 
 TASKBARS = {

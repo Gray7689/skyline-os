@@ -4,6 +4,7 @@
 #   skyline-layout classic   one bar at the bottom (like Windows)
 #   skyline-layout dock      top bar + app dock at the bottom (like a Mac)
 #   skyline-layout minimal   one small floating bar
+#   skyline-layout shell     SkyLine Shell: top bar + dock with the Cloud Menu and Puff
 #   skyline-layout menu      pick in a small window
 #
 # After switching you can still drag, resize and edit every panel: right-click it > "Show Panel Configuration".
@@ -13,7 +14,7 @@ DIR=/usr/lib/skyline/layouts
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/skyline"
 
 usage() {
-	sed -n '2,10s/^# \{0,1\}//p' "$0"
+	sed -n '2,11s/^# \{0,1\}//p' "$0"
 }
 
 apply() {
@@ -36,12 +37,13 @@ menu() {
 		"Pick a desktop layout. Your current panels will be replaced." \
 		classic "Classic: one bar at the bottom" on \
 		dock "Dock: top bar and an app dock" off \
-		minimal "Minimal: one small floating bar" off) || exit 0
+		minimal "Minimal: one small floating bar" off \
+		shell "SkyLine Shell: top bar and a dock with Puff" off) || exit 0
 	[[ -n $choice ]] && apply "$choice"
 }
 
 case "${1:-menu}" in
-	classic | dock | minimal) apply "$1" ;;
+	classic | dock | minimal | shell) apply "$1" ;;
 	menu) menu ;;
 	-h | --help) usage ;;
 	*)

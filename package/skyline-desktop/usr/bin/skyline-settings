@@ -233,10 +233,11 @@ class SkyPage:
 class LayoutPage:
     def __init__(self, window):
         self.window = window
-        row = QHBoxLayout()
+        row = QGridLayout()
+        row.setSpacing(8)
         self.group = QButtonGroup()
         current = sk.current_layout()
-        for name, label in sk.LAYOUTS.items():
+        for i, (name, label) in enumerate(sk.LAYOUTS.items()):
             label = label.split(":")[0]
             pm = QPixmap(str(sk.PREVIEWS / f"layout-{name}.png"))
             if pm.isNull():
@@ -246,8 +247,8 @@ class LayoutPage:
             b.setChecked(name == current)
             b.clicked.connect(lambda _=False, n=name: self.choose(n))
             self.group.addButton(b)
-            row.addWidget(b)
-        row.addStretch(1)
+            row.addWidget(b, i // 3, i % 3)
+        row.setColumnStretch(3, 1)
         self.widget = page(heading("Layout"),
                            note("Where your taskbar and app launcher sit. After switching you can still drag, "
                                 "resize and edit every panel: right-click it and choose \"Show Panel Configuration\"."),

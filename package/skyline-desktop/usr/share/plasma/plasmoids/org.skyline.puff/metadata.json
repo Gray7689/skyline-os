@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "SkyLine"
+            }
+        ],
+        "Category": "Utilities",
+        "Description": "Puff, your SkyLine Assistant, in the taskbar",
+        "Icon": "skyline",
+        "Id": "org.skyline.puff",
+        "License": "GPL-2.0-or-later",
+        "Name": "Puff",
+        "Version": "1.2"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

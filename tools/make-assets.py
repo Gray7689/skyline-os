@@ -358,7 +358,7 @@ def layout_previews(base):
         for i in range(n):
             draw.rounded_rectangle((x + i * (size + gap), y, x + i * (size + gap) + size, y + size), radius=3, fill=tile)
 
-    for name in ("classic", "dock", "minimal"):
+    for name in ("classic", "dock", "minimal", "shell"):
         im = Image.open(base).convert("RGB").resize((320, 180), Image.LANCZOS).convert("RGBA")
         layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
         d = ImageDraw.Draw(layer)
@@ -372,6 +372,16 @@ def layout_previews(base):
             d.rounded_rectangle((146, 3, 174, 8), radius=2, fill=tile)
             d.rounded_rectangle((105, 152, 215, 174), radius=8, fill=navy)
             icons(d, 112, 156, 6, 14, 3)
+        elif name == "shell":
+            d.rounded_rectangle((4, 3, 316, 13), radius=5, fill=navy)
+            d.rounded_rectangle((146, 6, 174, 10), radius=2, fill=tile)
+            d.rounded_rectangle((286, 6, 310, 10), radius=2, fill=tile)
+            d.rounded_rectangle((96, 150, 224, 174), radius=9, fill=navy)
+            d.rounded_rectangle((102, 154, 118, 170), radius=4, fill=(255, 173, 150, 255))
+            icons(d, 124, 155, 4, 14, 3)
+            d.ellipse((196, 153, 218, 171), fill=(255, 255, 255, 255))
+            d.rectangle((202, 159, 204, 162), fill=navy)
+            d.rectangle((209, 159, 211, 162), fill=navy)
         else:
             d.rounded_rectangle((110, 158, 210, 174), radius=8, fill=navy)
             icons(d, 116, 161, 4, 10, 4)
