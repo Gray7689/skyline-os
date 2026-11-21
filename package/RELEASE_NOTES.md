@@ -1,3 +1,7 @@
+## SkyLine 1.1.1
+
+- Fix: installing on a PC with Debian's desktop-base package (every SkyLine 1.0 install) stopped with "trying to overwrite /etc/xdg/kcm-about-distrorc".
+
 ## SkyLine 1.1
 
 **New**
@@ -14,7 +18,7 @@
 
 **Install on SkyLine 1.0**
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.1.0/skyline-desktop_1.1.0_all.deb
-sudo apt install ./skyline-desktop_1.1.0_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.1.1/skyline-desktop_1.1.1_all.deb
+sudo apt install ./skyline-desktop_1.1.1_all.deb
 ```
 Then log out and back in.

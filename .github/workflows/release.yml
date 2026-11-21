@@ -28,10 +28,17 @@ jobs:
         run: |
           docker run --rm -v "$PWD":/w -w /w debian:trixie bash -euxc '
             apt-get update -qq
+            # The Debian KDE packages that also touch SkyLine files, like a real SkyLine/KDE install.
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+              desktop-base sddm sddm-theme-breeze plymouth kinfocenter calamares-settings-debian >/dev/null
             DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/skyline-desktop_*_all.deb || { tail -n 40 /var/log/dpkg.log; exit 1; }
             for t in skyline-sky skyline-layout skyline-taskbar skyline-gamemode skyline-play skyline-update; do $t --help >/dev/null; done
             skyline-settings --help >/dev/null
             skyline-assistant --ask "make it night" | grep -qi night
+            dpkg-divert --list skyline-desktop
+            grep -q SkyLine /etc/xdg/kcm-about-distrorc
+            apt-get remove -y skyline-desktop >/dev/null && test -f /etc/xdg/kcm-about-distrorc
+            DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/skyline-desktop_*_all.deb >/dev/null
             export QT_QPA_PLATFORM=offscreen
             python3 - <<EOF
           import importlib.machinery, sys

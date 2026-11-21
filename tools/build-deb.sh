@@ -26,6 +26,8 @@ cp package/debian/control "$stage/DEBIAN/control"
 echo "Installed-Size: $(du -sk "$stage" | cut -f1)" >>"$stage/DEBIAN/control"
 install -m 0755 package/debian/postinst "$stage/DEBIAN/postinst"
 install -m 0755 package/debian/prerm "$stage/DEBIAN/prerm"
+install -m 0755 package/debian/preinst "$stage/DEBIAN/preinst"
+install -m 0755 package/debian/postrm "$stage/DEBIAN/postrm"
 
 mkdir -p dist
 dpkg-deb --root-owner-group -Zxz --build "$stage" "dist/$name" >/dev/null

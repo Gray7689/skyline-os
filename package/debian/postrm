@@ -1,0 +1,14 @@
+#!/bin/sh
+# skyline-desktop: give the diverted files back to their Debian packages when SkyLine is removed.
+set -e
+undivert() {
+	dpkg-divert --package skyline-desktop --remove --rename \
+		--divert "$1.debian" "$1" >/dev/null || true
+}
+case "$1" in
+	remove | purge | abort-install | disappear)
+		undivert /etc/xdg/kcm-about-distrorc
+		undivert /usr/share/sddm/themes/breeze/theme.conf.user
+		;;
+esac
+exit 0

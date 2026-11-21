@@ -1,0 +1,15 @@
+#!/bin/sh
+# skyline-desktop: take over a few files that Debian's own packages also provide,
+# the official way (dpkg-divert), so both packages can be installed together.
+set -e
+divert() {
+	dpkg-divert --package skyline-desktop --add --rename \
+		--divert "$1.debian" "$1" >/dev/null
+}
+case "$1" in
+	install | upgrade)
+		divert /etc/xdg/kcm-about-distrorc
+		divert /usr/share/sddm/themes/breeze/theme.conf.user
+		;;
+esac
+exit 0
