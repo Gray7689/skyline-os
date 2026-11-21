@@ -49,7 +49,7 @@ Item {
                 PC3.Label { text: panel.updateText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 PC3.ToolButton {
                     text: i18n("Update now")
-                    onClicked: panel.openAndClose("konsole --hold -e skyline-update install")
+                    onClicked: panel.openAndClose("setsid -f skyline-update-screen")
                 }
             }
         }

@@ -1,3 +1,7 @@
+## SkyLine 1.3.1
+
+- **New update screen:** "Update now" (notification, SkyLine Settings, the sky pill, or asking Puff) opens a full-screen "Updating SkyLine" with Puff, spinning dots, a percentage and the progress bar, in the colors of your sky. When it's done: "Log out now" or "Later". Esc turns it into a normal window. In a terminal, `skyline-update install` still works in text.
+
 ## SkyLine 1.3
 
 **SkyLine in Italian, a friendly first start, and the rest of SkyLine Shell.**
@@ -45,7 +49,7 @@ The SkyLine Shell layout now uses all of these. Pick it in SkyLine Settings > La
 
 **Install on SkyLine 1.0**
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.3.0/skyline-desktop_1.3.0_all.deb
-sudo apt install ./skyline-desktop_1.3.0_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.3.1/skyline-desktop_1.3.1_all.deb
+sudo apt install ./skyline-desktop_1.3.1_all.deb
 ```
 Then log out and back in.

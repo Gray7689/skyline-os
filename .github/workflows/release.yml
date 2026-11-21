@@ -35,6 +35,7 @@ jobs:
             for t in skyline-sky skyline-layout skyline-taskbar skyline-gamemode skyline-play skyline-update skyline-windows; do $t --help >/dev/null; done
             skyline-settings --help >/dev/null
             skyline-setup --help >/dev/null
+            skyline-update-screen --help >/dev/null
             skyline-assistant --ask "make it night" | grep -qi night
             # Italian: Puff, shell tools and the widget translations
             SKYLINE_LANG=it skyline-assistant --ask "fai notte" | grep -q "Cielo impostato su notte"
@@ -60,6 +61,8 @@ jobs:
           S = importlib.machinery.SourceFileLoader("s", "/usr/bin/skyline-settings").load_module()
           A = importlib.machinery.SourceFileLoader("a", "/usr/bin/skyline-assistant").load_module()
           U = importlib.machinery.SourceFileLoader("u", "/usr/bin/skyline-setup").load_module()
+          R = importlib.machinery.SourceFileLoader("r", "/usr/bin/skyline-update-screen").load_module()
+          r = R.UpdateScreen(demo=True); r.on_progress(50, "test"); r.on_finished("done", "9.9"); r.close()
           s = S.SettingsWindow("sky"); a = A.AssistantWindow(); u = U.SetupWindow(0)
           for i in range(len(S.PAGES)):
               s.nav.setCurrentRow(i); app.processEvents()

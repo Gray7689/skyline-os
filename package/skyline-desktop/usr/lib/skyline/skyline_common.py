@@ -338,9 +338,8 @@ def set_accent(name_or_hex):
 
 
 def update_skyline():
-    in_terminal("skyline-update", "install")
-    return tr("Checking for a new SkyLine version in a terminal window. If there is one, it installs it "
-              "(it may ask for your password).")
+    start("skyline-update-screen")
+    return tr("Opening the update screen. If there's a new SkyLine, it installs it (it may ask for your password).")
 
 
 def install_apps(ids):

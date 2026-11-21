@@ -62,7 +62,8 @@ TOOLS = [
      "on=false: SkyLine wallpapers again.", {"on": {"type": "boolean"}}, ["on"]),
     ("open_app", "Open an app by name, for example files, terminal, browser, store, settings, discord, steam.",
      {"name": {"type": "string"}}, ["name"]),
-    ("update_skyline", "Check for a new SkyLine version and install it (opens a terminal window, may ask for the password).",
+    ("update_skyline", "Check for a new SkyLine version and install it (opens the full-screen update screen, may ask "
+     "for the password).",
      {}, []),
 ]
 

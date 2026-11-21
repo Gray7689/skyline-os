@@ -1,0 +1,380 @@
+#!/usr/bin/env python3
+"""SkyLine update screen: a full-screen "Updating SkyLine" with Puff, spinning dots and a percentage.
+
+Usage: skyline-update-screen [--demo]
+Downloads the newest SkyLine from GitHub, checks it, and installs it (asks for the password once).
+Esc makes it a normal window. In a terminal, `skyline-update install` does the same in text.
+--demo shows the screen without changing anything (for trying it out).
+"""
+import hashlib
+import json
+import math
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+
+sys.path.insert(0, os.environ.get("SKYLINE_LIB", "/usr/lib/skyline"))
+import skyline_common as sk  # noqa: E402
+from skyline_i18n import tr  # noqa: E402
+from skyline_qt import Puff  # noqa: E402
+
+from PyQt6.QtCore import QObject, QPointF, QRectF, Qt, QThread, QTimer, pyqtSignal  # noqa: E402
+from PyQt6.QtGui import QColor, QFont, QIcon, QLinearGradient, QPainter  # noqa: E402
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget  # noqa: E402
+
+SKY_COLORS = {"sunrise": ("#FFD8CC", "#FFB8A3", "#23264A"), "day": ("#CDEBFF", "#8FC9FF", "#1F2A44"),
+              "dusk": ("#E4DBFF", "#B9A3FF", "#2A2350"), "night": ("#2E3360", "#14172B", "#EEF0FF")}
+FUN = ["Polishing the clouds…", "Teaching Puff new tricks…", "Painting the sky…", "Fluffing the pillows…",
+       "Tidying up the stars…", "Almost there…"]
+
+
+def update_repo():
+    return sk.read_kv(sk.DATA_ROOT / "usr/share/skyline/update.conf").get("REPO", "Gray7689/skyline-os")
+
+
+def newer(a, b):
+    """True if version a is newer than b (Debian rules)."""
+    return subprocess.run(["dpkg", "--compare-versions", a, "gt", b]).returncode == 0
+
+
+# ------------------------------------------------------------------ the work (in a thread)
+
+class Updater(QObject):
+    progress = pyqtSignal(float, str)       # 0..100, what's happening
+    finished = pyqtSignal(str, str)         # "done" | "uptodate" | "error", message
+
+    def __init__(self, demo=False):
+        super().__init__()
+        self.demo = demo
+
+    def run(self):
+        try:
+            self._run()
+        except Exception as e:  # never leave the screen stuck
+            self.finished.emit("error", tr("Something went wrong: {error}").format(error=e))
+
+    def _run(self):
+        if self.demo:
+            for i in range(101):
+                self.progress.emit(i, tr("Downloading SkyLine {version}…").format(version="9.9") if i < 60
+                                   else tr("Installing…"))
+                time.sleep(0.06)
+            self.finished.emit("done", "9.9")
+            return
+        self.progress.emit(0, tr("Looking for the newest SkyLine…"))
+        try:
+            req = urllib.request.Request(f"https://api.github.com/repos/{update_repo()}/releases/latest",
+                                         headers={"Accept": "application/vnd.github+json"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                rel = json.load(r)
+        except OSError:
+            self.finished.emit("error", tr("Couldn't reach GitHub. Check your internet connection."))
+            return
+        version = rel.get("tag_name", "").lstrip("v")
+        deb = sha = None
+        for a in rel.get("assets", []):
+            name = a.get("name", "")
+            if name.startswith("skyline-desktop_") and name.endswith("_all.deb"):
+                deb = a
+            elif name.startswith("skyline-desktop_") and name.endswith(".sha256"):
+                sha = a
+        installed = sk.skyline_version()
+        if not deb or not version:
+            self.finished.emit("error", tr("The latest release has no SkyLine package yet. Try again later."))
+            return
+        if not newer(version, installed):
+            self.finished.emit("uptodate", installed)
+            return
+
+        # 1) download: 0 - 60 %
+        tmp = tempfile.mkdtemp(prefix="skyline-update-")
+        path = os.path.join(tmp, deb["name"])
+        with urllib.request.urlopen(deb["browser_download_url"], timeout=60) as r, open(path, "wb") as out:
+            total = int(r.headers.get("Content-Length") or deb.get("size") or 0)
+            got = 0
+            while True:
+                chunk = r.read(65536)
+                if not chunk:
+                    break
+                out.write(chunk)
+                got += len(chunk)
+                if total:
+                    self.progress.emit(60 * got / total, tr("Downloading SkyLine {version}…").format(version=version))
+
+        # 2) check it: 60 - 62 %
+        self.progress.emit(60, tr("Checking the download…"))
+        if sha:
+            with urllib.request.urlopen(sha["browser_download_url"], timeout=30) as r:
+                want = r.read().decode().split()[0]
+            with open(path, "rb") as f:
+                got_sum = hashlib.sha256(f.read()).hexdigest()
+            if want != got_sum:
+                self.finished.emit("error", tr("The download is damaged (checksum doesn't match). Nothing was installed."))
+                return
+        self.progress.emit(62, tr("Waiting for your password…"))
+
+        # 3) install: 62 - 100 %  (apt reports "pmstatus:package:percent:description" lines)
+        cmd = ["pkexec", "apt-get", "install", "-y", "-o", "Dpkg::Options::=--force-confnew",
+               "-o", "APT::Status-Fd=1", "-o", "Dpkg::Use-Pty=0", path]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        tail = []
+        for line in p.stdout:
+            tail = (tail + [line.rstrip()])[-6:]
+            m = re.match(r"^pmstatus:[^:]*:([\d.]+):", line)
+            if m:
+                self.progress.emit(62 + 38 * float(m.group(1)) / 100, tr("Installing…"))
+        code = p.wait()
+        if code in (126, 127):
+            self.finished.emit("error", tr("The update needs your password. Nothing was changed."))
+        elif code != 0:
+            self.finished.emit("error", tr("The update didn't install.") + "\n" + "\n".join(tail[-3:]))
+        else:
+            self.progress.emit(100, tr("Done!"))
+            self.finished.emit("done", version)
+
+
+# ------------------------------------------------------------------ the screen
+
+class Spinner(QWidget):
+    """Five dots chasing each other around a circle, like the Windows update screen."""
+
+    def __init__(self, color):
+        super().__init__()
+        self.color = QColor(color)
+        self.t = 0.0
+        self.setFixedSize(76, 76)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.tick)
+        self.timer.start(16)
+
+    def tick(self):
+        self.t += 0.016
+        self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        c = QPointF(self.width() / 2, self.height() / 2)
+        radius = 28
+        cycle = 2.6
+        for i in range(5):
+            phase = ((self.t - i * 0.12) % cycle) / cycle
+            if phase > 0.78:          # the dots pause at the top, then go again
+                continue
+            u = phase / 0.78
+            eased = u + 0.35 * math.sin(2 * math.pi * u) / (2 * math.pi)  # slow, fast, slow
+            angle = -math.pi / 2 + eased * 2 * math.pi * 1.25
+            pos = QPointF(c.x() + radius * math.cos(angle), c.y() + radius * math.sin(angle))
+            col = QColor(self.color)
+            col.setAlphaF(min(1.0, 3 * (1 - u)) if u > 0.66 else 1.0)
+            p.setBrush(col)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.drawEllipse(pos, 5.0, 5.0)
+        p.end()
+
+
+class ProgressLine(QWidget):
+    def __init__(self, color):
+        super().__init__()
+        self.color = QColor(color)
+        self.value = 0.0
+        self.setFixedSize(360, 8)
+
+    def set(self, v):
+        self.value = max(0.0, min(100.0, v))
+        self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        track = QColor(self.color)
+        track.setAlphaF(0.22)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(track)
+        p.drawRoundedRect(QRectF(self.rect()), 4, 4)
+        p.setBrush(self.color)
+        w = max(8.0, self.width() * self.value / 100)
+        p.drawRoundedRect(QRectF(0, 0, w, self.height()), 4, 4)
+        p.end()
+
+
+class UpdateScreen(QWidget):
+    def __init__(self, demo=False):
+        super().__init__()
+        self.setWindowTitle(tr("Updating SkyLine"))
+        self.setWindowIcon(QIcon.fromTheme("skyline", QIcon(sk.LOGO)))
+        sky = "night"
+        code, out = sk.run("skyline-sky", "status", timeout=10)
+        m = re.search(r"^sky now: (\w+)", out or "", re.M)
+        if code == 0 and m and m.group(1) in SKY_COLORS:
+            sky = m.group(1)
+        self.top, self.bottom, ink = SKY_COLORS[sky]
+        self.ink = ink
+        self.fun_index = 0
+
+        self.puff = Puff(pixel=9)
+        self.spinner = Spinner(ink)
+        self.title = self.label(tr("Updating SkyLine"), 30, QFont.Weight.Bold)
+        self.percent = self.label("0%", 54, QFont.Weight.Light)
+        self.bar = ProgressLine(ink)
+        self.step = self.label(tr("Getting ready…"), 13, QFont.Weight.Normal, 0.85)
+        self.fun = self.label(tr(FUN[0]), 12, QFont.Weight.Normal, 0.6)
+        self.warning = self.label(tr("Please don't turn off your computer. This usually takes a minute or two."),
+                                  13, QFont.Weight.Normal, 0.8)
+
+        self.primary = QPushButton()
+        self.secondary = QPushButton()
+        for b in (self.primary, self.secondary):
+            b.setMinimumSize(170, 44)
+            b.hide()
+        self.primary.setStyleSheet(f"QPushButton {{ background: {ink}; color: {self.top}; border: none; "
+                                   "border-radius: 22px; font-size: 13pt; font-weight: 600; padding: 0 22px; }")
+        self.secondary.setStyleSheet(f"QPushButton {{ background: transparent; color: {ink}; border: 2px solid {ink}; "
+                                     "border-radius: 22px; font-size: 13pt; padding: 0 22px; }")
+        buttons = QHBoxLayout()
+        buttons.addStretch(1)
+        buttons.addWidget(self.secondary)
+        buttons.addWidget(self.primary)
+        buttons.addStretch(1)
+
+        col = QVBoxLayout(self)
+        col.setSpacing(14)
+        col.addStretch(3)
+        for w in (self.puff, self.spinner, self.title, self.percent):
+            col.addWidget(w, 0, Qt.AlignmentFlag.AlignHCenter)
+        col.addWidget(self.bar, 0, Qt.AlignmentFlag.AlignHCenter)
+        col.addWidget(self.step, 0, Qt.AlignmentFlag.AlignHCenter)
+        col.addWidget(self.fun, 0, Qt.AlignmentFlag.AlignHCenter)
+        col.addSpacing(16)
+        col.addLayout(buttons)
+        col.addStretch(4)
+        col.addWidget(self.warning, 0, Qt.AlignmentFlag.AlignHCenter)
+        col.addSpacing(36)
+
+        self.fun_timer = QTimer(self)
+        self.fun_timer.timeout.connect(self.next_fun)
+        self.fun_timer.start(3500)
+
+        self.thread = QThread(self)
+        self.worker = Updater(demo)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.progress.connect(self.on_progress)
+        self.worker.finished.connect(self.on_finished)
+        self.puff.busy = True
+
+    def start(self):
+        self.thread.start()
+
+    def label(self, text, size, weight, opacity=1.0):
+        lab = QLabel(text)
+        lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lab.setWordWrap(True)
+        lab.setFixedWidth(760)  # wrapped labels need a real width, or Qt squeezes them into a narrow column
+        f = lab.font()
+        f.setPointSize(size)
+        f.setWeight(weight)
+        lab.setFont(f)
+        c = QColor(self.ink)
+        lab.setStyleSheet(f"color: rgba({c.red()},{c.green()},{c.blue()},{int(opacity * 255)}); background: transparent;")
+        return lab
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        g = QLinearGradient(0, 0, 0, self.height())
+        g.setColorAt(0, QColor(self.top))
+        g.setColorAt(1, QColor(self.bottom))
+        p.fillRect(self.rect(), g)
+        p.end()
+
+    def next_fun(self):
+        self.fun_index = (self.fun_index + 1) % len(FUN)
+        self.fun.setText(tr(FUN[self.fun_index]))
+
+    def on_progress(self, value, text):
+        self.percent.setText(f"{int(value)}%")
+        self.bar.set(value)
+        self.step.setText(text)
+
+    def on_finished(self, result, info):
+        self.thread.quit()
+        self.puff.busy = False
+        self.spinner.hide()
+        self.fun_timer.stop()
+        self.fun.hide()
+        self.warning.hide()
+        self.primary.show()
+        if result == "done":
+            self.title.setText(tr("SkyLine {version} is ready!").format(version=info))
+            self.percent.setText("✓")
+            self.bar.set(100)
+            self.step.setText(tr("Log out and back in to start using everything new."))
+            self.primary.setText(tr("Log out now"))
+            self.primary.clicked.connect(self.logout)
+            self.secondary.setText(tr("Later"))
+            self.secondary.clicked.connect(self.close)
+            self.secondary.show()
+        elif result == "uptodate":
+            self.title.setText(tr("SkyLine is up to date"))
+            self.percent.setText("✓")
+            self.bar.hide()
+            self.step.setText(tr("You have SkyLine {version}, the newest one.").format(version=info))
+            self.primary.setText(tr("Close"))
+            self.primary.clicked.connect(self.close)
+        else:
+            self.title.setText(tr("The update didn't finish"))
+            self.percent.setText("!")
+            self.bar.hide()
+            self.step.setText(info)
+            self.primary.setText(tr("Try again"))
+            self.primary.clicked.connect(self.retry)
+            self.secondary.setText(tr("Close"))
+            self.secondary.clicked.connect(self.close)
+            self.secondary.show()
+
+    def retry(self):
+        sk.start(sys.executable, os.path.abspath(sys.argv[0]))
+        self.close()
+
+    def logout(self):
+        sk.start("dbus-send", "--session", "--type=method_call", "--dest=org.kde.LogoutPrompt",
+                 "/LogoutPrompt", "org.kde.LogoutPrompt.promptLogout")
+        self.close()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape and self.isFullScreen():
+            self.showNormal()
+            self.resize(900, 640)
+        else:
+            super().keyPressEvent(event)
+
+    def closeEvent(self, event):
+        if self.thread.isRunning() and self.primary.isHidden():
+            event.ignore()   # don't stop halfway through installing
+            self.showNormal()
+            return
+        self.thread.quit()
+        self.thread.wait(2000)
+        super().closeEvent(event)
+
+
+def main():
+    args = sys.argv[1:]
+    if args and args[0] in ("-h", "--help"):
+        print(__doc__)
+        return 0
+    app = QApplication(sys.argv)
+    app.setApplicationName("skyline-update-screen")
+    app.setDesktopFileName("skyline-update-screen")
+    w = UpdateScreen(demo="--demo" in args)
+    w.showFullScreen()
+    w.start()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

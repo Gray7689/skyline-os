@@ -106,7 +106,8 @@ notify() {
 	action=$(notify-send -a SkyLine -i skyline -A update="$(t "Update now")" -A later="$(t "Later")" \
 		"$(tf "SkyLine %s is ready" "$version")" "$(t "New features and fixes for your desktop.")" 2>/dev/null || true)
 	if [[ $action == update ]]; then
-		setsid -f konsole --hold -e skyline-update install >/dev/null 2>&1
+		# The full-screen update screen (falls back to a terminal window if it can't start).
+		setsid -f sh -c 'skyline-update-screen || konsole --hold -e skyline-update install' >/dev/null 2>&1
 	fi
 }
 

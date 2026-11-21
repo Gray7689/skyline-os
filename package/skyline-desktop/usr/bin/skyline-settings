@@ -377,7 +377,7 @@ class UpdatesPage:
         check.clicked.connect(self.check)
         self.update = QPushButton(tr("Update now"))
         self.update.setEnabled(False)
-        self.update.clicked.connect(lambda: sk.in_terminal("skyline-update", "install"))
+        self.update.clicked.connect(lambda: sk.start("skyline-update-screen"))
         system = QPushButton(tr("Debian and app updates (Discover)…"))
         system.clicked.connect(lambda: sk.start("skyline-update", "system"))
         row = QHBoxLayout()

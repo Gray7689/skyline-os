@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PKG = ROOT / "package/skyline-desktop"
 L10N = PKG / "usr/share/skyline/l10n"
-PY_FILES = [PKG / "usr/bin" / n for n in ("skyline-settings", "skyline-assistant", "skyline-setup")] + \
+PY_FILES = [PKG / "usr/bin" / n for n in ("skyline-settings", "skyline-assistant", "skyline-setup", "skyline-update-screen")] + \
     [PKG / "usr/lib/skyline" / n for n in ("skyline_common.py", "skyline_ai.py", "skyline_qt.py")]
 SH_FILES = [p for p in (PKG / "usr/bin").iterdir() if p.is_file() and p.read_bytes()[:40].find(b"sh") > 0 and
             b"python" not in p.read_bytes()[:40]] + \
@@ -100,6 +100,10 @@ def all_strings():
         for s in py_tr_strings(f.read_text()):
             out.setdefault(s, set()).add(f.name)
         # page titles in the setup are translated at display time
+        if f.name == "skyline-update-screen":
+            m = re.search(r"^FUN = \[(.*?)\]", f.read_text(), re.M | re.S)
+            for item in re.findall(r'"([^"]+)"', m.group(1) if m else ""):
+                out.setdefault(item, set()).add(f.name)
         if f.name == "skyline-setup":
             for m in re.finditer(r'^    title = "(.*)"$', f.read_text(), re.M):
                 out.setdefault(m.group(1), set()).add(f.name)
