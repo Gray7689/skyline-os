@@ -312,9 +312,9 @@ class UpdateScreen(QWidget):
             self.title.setText(tr("SkyLine {version} is ready!").format(version=info))
             self.percent.setText("✓")
             self.bar.set(100)
-            self.step.setText(tr("Log out and back in to start using everything new."))
-            self.primary.setText(tr("Log out now"))
-            self.primary.clicked.connect(self.logout)
+            self.step.setText(tr("Restart your computer to finish the update."))
+            self.primary.setText(tr("Restart now"))
+            self.primary.clicked.connect(self.restart)
             self.secondary.setText(tr("Later"))
             self.secondary.clicked.connect(self.close)
             self.secondary.show()
@@ -340,9 +340,12 @@ class UpdateScreen(QWidget):
         sk.start(sys.executable, os.path.abspath(sys.argv[0]))
         self.close()
 
-    def logout(self):
-        sk.start("dbus-send", "--session", "--type=method_call", "--dest=org.kde.LogoutPrompt",
-                 "/LogoutPrompt", "org.kde.LogoutPrompt.promptLogout")
+    def restart(self):
+        # Ask KDE to save the session and restart; if Plasma isn't answering, restart directly.
+        code, _ = sk.run("dbus-send", "--session", "--print-reply", "--dest=org.kde.Shutdown", "/Shutdown",
+                         "org.kde.Shutdown.logoutAndReboot", timeout=15)
+        if code != 0:
+            sk.start("systemctl", "reboot")
         self.close()
 
     def keyPressEvent(self, event):

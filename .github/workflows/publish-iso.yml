@@ -1,0 +1,80 @@
+# Publishes an ISO made by "Build SkyLine ISO" as a GitHub release anyone can download (no login),
+# so it doesn't expire like build artifacts do.
+# GitHub allows 2 GB per file and the ISO is about 3 GB, so it's uploaded in parts, with a
+# double-click joiner for Windows and one for Linux.
+# Run it from the Actions tab with the number of a successful ISO build.
+name: Publish SkyLine ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run ID of a successful 'Build SkyLine ISO' run"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make room on the runner
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - name: Download the ISO from that build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "${{ inputs.run_id }}" -n skyline-iso -D iso
+
+      - name: Split, write the joiners, publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          sha=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}" --jq .head_sha)
+          version=$(git show "$sha:package/debian/control" | sed -n 's/^Version: //p')
+          cd iso
+          iso=$(ls *.iso | head -n 1)
+          split -b 1900M -d -a 1 "$iso" "$iso.part"
+          parts=$(ls "$iso".part* | sort)
+          # Windows: double-click to join
+          {
+            printf '@echo off\r\n'
+            printf 'cd /d "%%~dp0"\r\n'
+            printf 'echo Joining the SkyLine ISO, please wait...\r\n'
+            printf 'copy /b %s "%s"\r\n' "$(for p in $parts; do printf '"%s"+' "$p"; done | sed 's/+$//')" "$iso"
+            printf 'echo.\r\n'
+            printf 'echo Done! Now put "%s" on a USB stick with Rufus or balenaEtcher.\r\n' "$iso"
+            printf 'pause\r\n'
+          } > join-on-windows.bat
+          printf '#!/bin/sh\ncd "$(dirname "$0")"\ncat %s > "%s"\nsha256sum -c "%s.sha256" && echo "Done: %s"\n' \
+            "$(echo $parts | tr '\n' ' ')" "$iso" "$iso" "$iso" > join-on-linux.sh
+          chmod +x join-on-linux.sh
+          cat > notes.md <<EOF
+          The SkyLine $version installer for USB sticks (Debian 13 + KDE Plasma 6, works with Secure Boot).
+
+          **How to get the ISO**
+          1. Download **all** the files below into the same folder: $(echo $parts | sed 's/ /, /g'), and **join-on-windows.bat**.
+          2. Double-click **join-on-windows.bat**. It makes **$iso** (about 3 GB).
+          3. Put it on a USB stick (8 GB or more) with **Rufus** or **balenaEtcher**, then boot from it.
+
+          On Linux, run \`sh join-on-linux.sh\` instead (it also checks the download).
+
+          Once installed, SkyLine updates itself: a notification appears when a new version is out.
+          EOF
+          sed -i 's/^          //' notes.md
+          tag="iso-$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" $parts "$iso.sha256" join-on-windows.bat join-on-linux.sh --clobber
+          else
+            # --latest=false: SkyLine PCs look for updates in the latest release, which must stay the package one.
+            gh release create "$tag" $parts "$iso.sha256" join-on-windows.bat join-on-linux.sh \
+              --target "$sha" --latest=false --title "SkyLine $version (USB installer)" --notes-file notes.md
+          fi
+          echo "Published: https://github.com/${{ github.repository }}/releases/tag/$tag"

@@ -1,6 +1,10 @@
+## SkyLine 1.3.2
+
+- After an update, the update screen asks to **restart the computer** ("Restart now" / "Later") instead of logging out, so every part of SkyLine (boot screen, login, drivers) is fresh.
+
 ## SkyLine 1.3.1
 
-- **New update screen:** "Update now" (notification, SkyLine Settings, the sky pill, or asking Puff) opens a full-screen "Updating SkyLine" with Puff, spinning dots, a percentage and the progress bar, in the colors of your sky. When it's done: "Log out now" or "Later". Esc turns it into a normal window. In a terminal, `skyline-update install` still works in text.
+- **New update screen:** "Update now" (notification, SkyLine Settings, the sky pill, or asking Puff) opens a full-screen "Updating SkyLine" with Puff, spinning dots, a percentage and the progress bar, in the colors of your sky. When it's done: "Restart now" or "Later". Esc turns it into a normal window. In a terminal, `skyline-update install` still works in text.
 
 ## SkyLine 1.3
 
@@ -49,7 +53,7 @@ The SkyLine Shell layout now uses all of these. Pick it in SkyLine Settings > La
 
 **Install on SkyLine 1.0**
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.3.1/skyline-desktop_1.3.1_all.deb
-sudo apt install ./skyline-desktop_1.3.1_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.3.2/skyline-desktop_1.3.2_all.deb
+sudo apt install ./skyline-desktop_1.3.2_all.deb
 ```
 Then log out and back in.

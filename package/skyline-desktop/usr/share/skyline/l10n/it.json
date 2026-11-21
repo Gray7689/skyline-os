@@ -301,7 +301,6 @@
   "Search apps and files, or ask Puff…": "Cerca app e file, o chiedi a Puff…",
   "Secure Boot key already registered.": "Chiave di Secure Boot già registrata.",
   "Set your city in SkyLine Settings to see the temperature": "Imposta la tua città in Impostazioni di SkyLine per vedere la temperatura",
-  "SkyLine %s installed. Log out and back in to see everything new.": "SkyLine %s installato. Esci e rientra per vedere tutte le novità.",
   "SkyLine %s is available (you have %s).": "SkyLine %s è disponibile (hai la %s).",
   "SkyLine %s is ready": "SkyLine %s è pronto",
   "SkyLine Apps": "App di SkyLine",
@@ -340,7 +339,6 @@
   "Getting ready…": "Mi preparo…",
   "Please don't turn off your computer. This usually takes a minute or two.": "Non spegnere il computer. Di solito ci vuole un minuto o due.",
   "SkyLine {version} is ready!": "SkyLine {version} è pronto!",
-  "Log out and back in to start using everything new.": "Esci e rientra per iniziare a usare tutte le novità.",
   "SkyLine is up to date": "SkyLine è aggiornato",
   "You have SkyLine {version}, the newest one.": "Hai SkyLine {version}, il più recente.",
   "The update didn't finish": "L'aggiornamento non è finito",
@@ -350,5 +348,8 @@
   "Painting the sky…": "Dipingo il cielo…",
   "Fluffing the pillows…": "Sprimaccio i cuscini…",
   "Tidying up the stars…": "Metto in ordine le stelle…",
-  "Almost there…": "Quasi fatto…"
+  "Almost there…": "Quasi fatto…",
+  "Restart your computer to finish the update.": "Riavvia il computer per completare l'aggiornamento.",
+  "Restart now": "Riavvia ora",
+  "SkyLine %s installed. Restart your computer to finish the update.": "SkyLine %s installato. Riavvia il computer per completare l'aggiornamento."
 }

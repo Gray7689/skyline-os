@@ -88,7 +88,7 @@ install_update() {
 	t "Installing (SkyLine will ask for your password) ..."; echo
 	pkexec apt-get install -y -o Dpkg::Options::=--force-confnew "$tmp/skyline-desktop_${version}_all.deb"
 	echo
-	tf "SkyLine %s installed. Log out and back in to see everything new." "$version"; echo
+	tf "SkyLine %s installed. Restart your computer to finish the update." "$version"; echo
 }
 
 notify() {

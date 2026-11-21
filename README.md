@@ -27,13 +27,17 @@ This folder is the whole recipe. One command turns it into an ISO you can put on
 | **Claude** | The official Claude desktop app (Linux beta) comes pre-installed. |
 | **Secure Boot** | Uses Debian's Microsoft-signed boot chain (shim + GRUB). No need to turn Secure Boot off. |
 
+## A USB installer to share
+
+Build one in Actions > **Build SkyLine ISO**, then run **Publish SkyLine ISO** with that run's ID: it becomes a release anyone can download (in two parts plus `join-on-windows.bat`, because GitHub allows 2 GB per file).
+
 ## Already on SkyLine 1.0? Update in two commands
 
 (On 1.1 or newer, just run `skyline-update install`.)
 
 ```
-curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.3.1/skyline-desktop_1.3.1_all.deb
-sudo apt install ./skyline-desktop_1.3.1_all.deb
+curl -LO https://github.com/Gray7689/skyline-os/releases/download/v1.3.2/skyline-desktop_1.3.2_all.deb
+sudo apt install ./skyline-desktop_1.3.2_all.deb
 ```
 Log out and back in. From now on SkyLine tells you when a new version is out.
 
